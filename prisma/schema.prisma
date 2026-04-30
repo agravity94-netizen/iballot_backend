@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  CANDIDATE
+  VOTER
+}
+
+enum OtpType {
+  PHONE_VERIFY
+  EMAIL_VERIFY
+  LOGIN
+  PASSWORD_RESET
+}
+
+enum ElectionType {
+  GENERAL
+  UNIVERSITY
+  ORGANIZATIONAL
+  BY_ELECTION
+}
+
+enum ElectionStatus {
+  DRAFT
+  PUBLISHED
+  ACTIVE
+  PAUSED
+  CLOSED
+  RESULTS_PUBLISHED
+}
+
+enum CandidateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum FraudAlertType {
+  DUPLICATE_VOTE_ATTEMPT
+  SUSPICIOUS_IP
+  DEVICE_MISMATCH
+  RAPID_REQUESTS
+  JAILBREAK_DETECTED
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationType {
+  ELECTION_STARTED
+  ELECTION_ENDING_SOON
+  VOTE_CONFIRMED
+  RESULTS_PUBLISHED
+  CANDIDATE_APPROVED
+  FRAUD_ALERT
+}
+
+model Constituency {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  code      String   @unique @db.VarChar(50)
+  type      String   @db.VarChar(100)
+  createdAt DateTime @default(now())
+
+  users     User[]
+  elections Election[]
+}
+
+model User {
+  id             String        @id @default(uuid()) @db.Uuid
+  cnic           String?       @unique @db.VarChar(20)
+  studentId      String?       @unique @db.VarChar(50)
+  email          String        @unique @db.VarChar(255)
+  phone          String        @unique @db.VarChar(30)
+  passwordHash   String        @db.Text
+  role           Role          @default(VOTER)
+  isVerified     Boolean       @default(false)
+  isActive       Boolean       @default(true)
+  constituencyId String?       @db.Uuid
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Profile Extension
+  fatherName     String?       @db.VarChar(255)
+  isOverseas     Boolean       @default(false)
+  province       String?       @db.VarChar(100)
+  city           String?       @db.VarChar(100)
+  addressDetails String?       @db.Text
+  photoUrl       String?       @db.Text
+  backupCodes    String[]      @default([])
+
+  constituency   Constituency? @relation(fields: [constituencyId], references: [id], onDelete: SetNull)
+  sessions       Session[]
+  otpCodes       OtpCode[]
+  devices        Device[]
+  candidate      Candidate?
+  voteReceipts   VoteReceipt[]
+  auditLogs      AuditLog[]
+  fraudAlerts    FraudAlert[]
+  notifications  Notification[]
+  resolvedAlerts FraudAlert[]  @relation("ResolvedBy")
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  token     String   @unique @db.Text
+  deviceId  String?  @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OtpCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  code      String   @db.VarChar(10)
+  type      OtpType
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Device {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @db.Uuid
+  deviceFingerprint String   @db.Text
+  platform          String   @db.VarChar(20)
+  lastSeen          DateTime @default(now())
+  isTrusted         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceFingerprint])
+}
+
+model Election {
+  id                 String         @id @default(uuid()) @db.Uuid
+  title              String         @db.VarChar(255)
+  description        String?        @db.Text
+  constituencyId     String?        @db.Uuid
+  type               ElectionType
+  status             ElectionStatus @default(DRAFT)
+  startDate          DateTime
+  endDate            DateTime
+  createdBy          String         @db.Uuid
+  resultsPublishedAt DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  constituency       Constituency?  @relation(fields: [constituencyId], references: [id], onDelete: SetNull)
+  candidates         Candidate[]
+  votes              Vote[]
+  voteReceipts       VoteReceipt[]
+  auditLogs          AuditLog[]
+  candidateVoteCount CandidateVoteCount[]
+}
+
+model Candidate {
+  id         String          @id @default(uuid()) @db.Uuid
+  userId     String          @unique @db.Uuid
+  electionId String          @db.Uuid
+  status     CandidateStatus @default(PENDING)
+  approvedBy String?         @db.Uuid
+  approvedAt DateTime?
+  createdAt  DateTime        @default(now())
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  election   Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  profile    CandidateProfile?
+  voteCount  CandidateVoteCount?
+  votes      Vote[]
+}
+
+model CandidateProfile {
+  id           String    @id @default(uuid()) @db.Uuid
+  candidateId  String    @unique @db.Uuid
+  photoUrl     String?   @db.Text
+  videoUrl     String?   @db.Text
+  manifesto    String?   @db.Text
+  experience   String?   @db.Text
+  promises     String[]  @default([])
+  profileViews Int       @default(0)
+  updatedAt    DateTime  @updatedAt
+
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+model CandidateVoteCount {
+  id          String    @id @default(uuid()) @db.Uuid
+  candidateId String    @unique @db.Uuid
+  electionId  String    @db.Uuid
+  count       Int       @default(0)
+  updatedAt   DateTime  @updatedAt
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  election    Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+}
+
+model Vote {
+  id            String   @id @default(uuid()) @db.Uuid
+  electionId    String   @db.Uuid
+  candidateId   String   @db.Uuid
+  receiptHash   String   @unique @db.Text
+  encryptedData String?  @db.Text
+  castedAt      DateTime @default(now())
+
+  election      Election @relation(fields: [electionId], references: [id], onDelete: Restrict)
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+}
+
+model VoteReceipt {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  electionId  String   @db.Uuid
+  receiptHash String   @unique @db.Text
+  castedAt    DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  election    Election @relation(fields: [electionId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, electionId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  electionId String?  @db.Uuid
+  action     String   @db.Text
+  entity     String   @db.Text
+  entityId   String?  @db.Text
+  metadata   Json?
+  ipAddress  String?  @db.VarChar(45)
+  userAgent  String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  actor      User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  election   Election? @relation(fields: [electionId], references: [id], onDelete: SetNull)
+}
+
+model FraudAlert {
+  id          String         @id @default(uuid()) @db.Uuid
+  userId      String?        @db.Uuid
+  type        FraudAlertType
+  description String         @db.Text
+  ipAddress   String?        @db.VarChar(45)
+  deviceId    String?        @db.Uuid
+  severity    AlertSeverity
+  isResolved  Boolean        @default(false)
+  resolvedBy  String?        @db.Uuid
+  createdAt   DateTime       @default(now())
+
+  user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  resolver    User?          @relation("ResolvedBy", fields: [resolvedBy], references: [id], onDelete: SetNull)
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  title     String           @db.VarChar(255)
+  message   String           @db.Text
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
