@@ -347,7 +347,7 @@ export const authController = {
         where: { id: user.id },
         data: { 
           backupCodes: {
-            set: user.backupCodes.filter(c => c !== backupCode)
+            set: user.backupCodes.filter((c: string) => c !== backupCode)
           }
         }
       });

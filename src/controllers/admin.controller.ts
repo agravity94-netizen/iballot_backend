@@ -15,7 +15,7 @@ export const adminController = {
       });
 
       return sendSuccess(res, 200, 'Voters fetched successfully', {
-        voters: voters.map(v => ({
+        voters: voters.map((v: any) => ({
           id: v.id,
           name: v.email.split('@')[0], // Fallback if name not in model, or use email
           cnic: v.cnic,
@@ -66,10 +66,10 @@ export const adminController = {
         totalVotes,
         turnout: voterCount > 0 ? ((totalVotes / voterCount) * 100).toFixed(1) : 0,
         pendingApprovals: [
-          ...pendingVoters.map(v => ({ id: v.id, name: v.email.split('@')[0], type: 'VOTER_VERIFICATION', initials: v.email.substring(0, 2).toUpperCase() })),
-          ...pendingCandidates.map(c => ({ id: c.id, name: c.user.email.split('@')[0], type: 'CANDIDATE_APPROVAL', initials: c.user.email.substring(0, 2).toUpperCase() }))
+          ...pendingVoters.map((v: any) => ({ id: v.id, name: v.email.split('@')[0], type: 'VOTER_VERIFICATION', initials: v.email.substring(0, 2).toUpperCase() })),
+          ...pendingCandidates.map((c: any) => ({ id: c.id, name: c.user.email.split('@')[0], type: 'CANDIDATE_APPROVAL', initials: c.user.email.substring(0, 2).toUpperCase() }))
         ],
-        hourlyTurnout: turnoutData.reverse().map(d => d.count)
+        hourlyTurnout: turnoutData.reverse().map((d: any) => d.count)
       });
     } catch (err: any) {
       return sendError(res, 500, err.message);

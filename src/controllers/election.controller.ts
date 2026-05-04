@@ -28,7 +28,7 @@ export const electionController = {
       });
 
       return sendSuccess(res, 200, 'Elections fetched', {
-        elections: elections.map(e => ({
+        elections: elections.map((e: any) => ({
           id: e.id,
           title: e.title,
           type: e.type,

@@ -24,7 +24,7 @@ exports.electionController = {
                 orderBy: { startDate: 'desc' }
             });
             return (0, response_1.sendSuccess)(res, 200, 'Elections fetched', {
-                elections: elections.map(e => ({
+                elections: elections.map((e) => ({
                     id: e.id,
                     title: e.title,
                     type: e.type,
