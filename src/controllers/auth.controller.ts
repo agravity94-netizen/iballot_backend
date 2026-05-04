@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { sendSuccess, sendError } from '../utils/response';
 import { otpService } from '../services/otp.service';
 import { auditLog } from '../utils/auditLog';
@@ -38,7 +38,7 @@ export const authController = {
       if (existing) return sendError(res, 409, 'User already exists with this email, phone, or CNIC');
 
       // Create user in unverified state with a temporary password
-      const tempPasswordHash = await bcrypt.hash(uuidv4(), 12);
+      const tempPasswordHash = await bcrypt.hash(randomUUID(), 12);
       const user = await prisma.user.create({
         data: { 
           cnic, 

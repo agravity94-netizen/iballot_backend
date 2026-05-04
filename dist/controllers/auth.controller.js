@@ -7,7 +7,7 @@ exports.authController = void 0;
 const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const uuid_1 = require("uuid");
+const crypto_1 = require("crypto");
 const response_1 = require("../utils/response");
 const otp_service_1 = require("../services/otp.service");
 const auditLog_1 = require("../utils/auditLog");
@@ -39,7 +39,7 @@ exports.authController = {
             if (existing)
                 return (0, response_1.sendError)(res, 409, 'User already exists with this email, phone, or CNIC');
             // Create user in unverified state with a temporary password
-            const tempPasswordHash = await bcryptjs_1.default.hash((0, uuid_1.v4)(), 12);
+            const tempPasswordHash = await bcryptjs_1.default.hash((0, crypto_1.randomUUID)(), 12);
             const user = await prisma.user.create({
                 data: {
                     cnic,
