@@ -1,8 +1,9 @@
 import { Router } from 'express';
+import { candidateController } from '../controllers/candidate.controller';
 
 const router = Router();
 
-// Placeholder for candidate routes
-// router.get('/', ...);
+// GET /api/candidates
+router.get('/', candidateController.getAll);
 
 export default router;

