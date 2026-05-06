@@ -49,7 +49,7 @@ export const voteController = {
       }
 
       // Refresh materialized view (non-blocking)
-      prisma.$executeRaw`SELECT refresh_election_results()`.catch(() => {});
+      prisma.$executeRaw`SELECT refresh_election_results()`.catch(() => { });
 
       return sendSuccess(res, 201, 'Vote cast successfully', {
         receiptHash: voteResult.receiptHash,

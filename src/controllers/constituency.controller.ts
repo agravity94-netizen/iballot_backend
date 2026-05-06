@@ -25,7 +25,7 @@ export const constituencyController = {
       // or we can extract them from constituency types
       const provinces = ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad Capital Territory'];
       const cities = ['Lahore', 'Karachi', 'Islamabad', 'Peshawar', 'Quetta', 'Multan', 'Faisalabad'];
-      
+
       return sendSuccess(res, 200, 'Locations retrieved', { provinces, cities });
     } catch (err: any) {
       return sendError(res, 500, err.message);

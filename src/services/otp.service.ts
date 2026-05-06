@@ -15,10 +15,10 @@ export const otpService = {
   // Create an OTP for a user
   createOtp: async (userId: string, type: 'EMAIL_VERIFY' | 'PHONE_VERIFY' | 'LOGIN' | 'PASSWORD_RESET') => {
     // Generate a 6-digit code for registration/login, 4-digit for password reset
-    const code = type === 'PASSWORD_RESET' 
-        ? Math.floor(1000 + Math.random() * 9000).toString() 
-        : Math.floor(100000 + Math.random() * 900000).toString();
-    
+    const code = type === 'PASSWORD_RESET'
+      ? Math.floor(1000 + Math.random() * 9000).toString()
+      : Math.floor(100000 + Math.random() * 900000).toString();
+
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Mark old codes for this user and type as used
@@ -41,9 +41,9 @@ export const otpService = {
   // Generate and "send" OTP
   send: async (userId: string, identifier: string, type: 'EMAIL_VERIFY' | 'PHONE_VERIFY' | 'LOGIN' | 'PASSWORD_RESET') => {
     const otp = await otpService.createOtp(userId, type);
-    
+
     console.log(`[OTP DEBUG] Sending ${otp.code} to ${identifier} (${type})`);
-    
+
     // If it's an email related action, send via Gmail
     if (type === 'EMAIL_VERIFY' || type === 'PASSWORD_RESET' || type === 'LOGIN') {
       try {
@@ -59,7 +59,7 @@ export const otpService = {
         console.error(`[OTP DEBUG] Failed to send email to ${identifier}:`, error);
       }
     }
-    
+
     return otp;
   },
 

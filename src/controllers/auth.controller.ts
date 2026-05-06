@@ -40,12 +40,12 @@ export const authController = {
       // Create user in unverified state with a temporary password
       const tempPasswordHash = await bcrypt.hash(randomUUID(), 12);
       const user = await prisma.user.create({
-        data: { 
-          cnic, 
-          email, 
-          phone, 
+        data: {
+          cnic,
+          email,
+          phone,
           passwordHash: tempPasswordHash,
-          isVerified: false 
+          isVerified: false
         }
       });
 
@@ -115,8 +115,8 @@ export const authController = {
           { expiresIn: '2h' }
         );
 
-        return sendSuccess(res, 200, 'Admin login successful', { 
-          accessToken, 
+        return sendSuccess(res, 200, 'Admin login successful', {
+          accessToken,
           user: { id: admin.id, email: admin.email, role: 'ADMIN' },
           isAdmin: true // Flag for frontend
         });
@@ -130,11 +130,11 @@ export const authController = {
       if (!valid) return sendError(res, 401, 'Invalid credentials');
 
       // Send login OTP
-      await otpService.send(user.id, user.phone, 'LOGIN');
+      await otpService.send(user.id, user.email, 'LOGIN');
 
       await auditLog({ action: 'LOGIN_ATTEMPT', entity: 'User', entityId: user.id, ipAddress: req.ip });
 
-      return sendSuccess(res, 200, 'OTP sent to your phone', { userId: user.id });
+      return sendSuccess(res, 200, 'OTP sent to your email', { userId: user.id });
 
     } catch (err: any) {
       return sendError(res, 500, err.message);
@@ -281,9 +281,9 @@ export const authController = {
       // Always return success to prevent email enumeration
       if (!user) return sendSuccess(res, 200, 'If this email exists, an OTP has been sent');
 
-      await otpService.send(user.id, user.phone, 'PASSWORD_RESET');
+      await otpService.send(user.id, user.email, 'PASSWORD_RESET');
 
-      return sendSuccess(res, 200, 'OTP sent to your registered phone', { userId: user.id });
+      return sendSuccess(res, 200, 'OTP sent to your registered email', { userId: user.id });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
@@ -320,14 +320,14 @@ export const authController = {
 
       const user = await prisma.user.update({
         where: { id: userId },
-        data: { 
-          fatherName, 
-          isOverseas, 
-          province, 
-          city, 
-          constituencyId, 
-          addressDetails, 
-          photoUrl 
+        data: {
+          fatherName,
+          isOverseas,
+          province,
+          city,
+          constituencyId,
+          addressDetails,
+          photoUrl
         }
       });
 
@@ -345,7 +345,7 @@ export const authController = {
       const passwordHash = await bcrypt.hash(password, 12);
       await prisma.user.update({
         where: { id: userId },
-        data: { 
+        data: {
           passwordHash,
           isActive: true // User is now fully active
         }
@@ -364,9 +364,9 @@ export const authController = {
     try {
       const { cnic, backupCode } = req.body;
       const user = await prisma.user.findUnique({ where: { cnic } });
-      
+
       if (!user) return sendError(res, 404, 'User not found');
-      
+
       // Check if code exists in user.backupCodes array
       const isMatch = user.backupCodes.includes(backupCode);
       if (!isMatch) return sendError(res, 401, 'Invalid backup code');
@@ -374,7 +374,7 @@ export const authController = {
       // Remove the used backup code (one-time use)
       await prisma.user.update({
         where: { id: user.id },
-        data: { 
+        data: {
           backupCodes: {
             set: user.backupCodes.filter((c: string) => c !== backupCode)
           }
@@ -392,7 +392,7 @@ export const authController = {
     try {
       const { cnic, biometricData } = req.body;
       const user = await prisma.user.findUnique({ where: { cnic } });
-      
+
       if (!user) return sendError(res, 404, 'User not found');
 
       // Note: In a production app, you would integrate with a biometric service (NADRA API, AWS Rekognition, etc.)

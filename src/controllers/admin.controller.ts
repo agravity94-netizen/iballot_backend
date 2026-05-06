@@ -83,7 +83,7 @@ export const adminController = {
       const { id } = req.params;
 
       const isActive = status !== 'Suspended';
-      
+
       const user = await prisma.user.update({
         where: { id: id as string },
         data: { isActive }

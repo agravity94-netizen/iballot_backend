@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import { sendSuccess, sendError } from '../utils/response';
 import { auditLog } from '../utils/auditLog';
 
-const prisma = new PrismaClient();
+// Using global prisma
 
 export const electionController = {
 
