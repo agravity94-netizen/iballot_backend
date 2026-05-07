@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import { sendSuccess, sendError } from '../utils/response';
 
-const prisma = new PrismaClient();
 
 export const adminController = {
   // GET /api/admin/voters

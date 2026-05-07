@@ -1,32 +1,68 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import { sendSuccess, sendError } from '../utils/response';
 
-const prisma = new PrismaClient();
+
 
 export const constituencyController = {
   // GET /api/constituencies
+  // Optional query params: city, province, type
   getAll: async (req: Request, res: Response) => {
     try {
+      const { city, province, type } = req.query;
+      
+      const where: any = {};
+      if (type) where.type = type as string;
+      
+      if (city) {
+        where.city = { name: city as string };
+      } else if (province) {
+        where.city = { province: { name: province as string } };
+      }
+
       const constituencies = await prisma.constituency.findMany({
+        where,
+        include: {
+          city: {
+            include: { province: true }
+          }
+        },
         orderBy: { name: 'asc' }
       });
+      
       return sendSuccess(res, 200, 'Constituencies retrieved', constituencies);
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
   },
 
-  // GET /api/locations/provinces
-  // Helper for the dropdowns
+  // GET /api/constituencies/locations
   getLocations: async (req: Request, res: Response) => {
     try {
-      // Mock data for provinces/cities as they might not be in the DB yet
-      // or we can extract them from constituency types
-      const provinces = ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad Capital Territory'];
-      const cities = ['Lahore', 'Karachi', 'Islamabad', 'Peshawar', 'Quetta', 'Multan', 'Faisalabad'];
+      const { province } = req.query;
 
-      return sendSuccess(res, 200, 'Locations retrieved', { provinces, cities });
+      if (province) {
+        // Get cities for a specific province
+        const cities = await prisma.city.findMany({
+          where: { province: { name: province as string } },
+          orderBy: { name: 'asc' },
+          select: { name: true }
+        });
+        return sendSuccess(res, 200, `Cities for ${province} retrieved`, { 
+          cities: cities.map(c => c.name) 
+        });
+      }
+
+      // Default: Get all provinces and all cities (for initial state)
+      const [provinces, cities] = await Promise.all([
+        prisma.province.findMany({ orderBy: { name: 'asc' }, select: { name: true } }),
+        prisma.city.findMany({ orderBy: { name: 'asc' }, select: { name: true } })
+      ]);
+
+      return sendSuccess(res, 200, 'Locations retrieved', { 
+        provinces: provinces.map(p => p.name), 
+        cities: cities.map(c => c.name) 
+      });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }

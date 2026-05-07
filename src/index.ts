@@ -1,7 +1,6 @@
 import app from './app';
-import { PrismaClient } from '@prisma/client';
+import prisma from './config/database';
 
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
 const bootstrap = async () => {

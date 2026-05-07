@@ -1,0 +1,43 @@
+
+[2026-05-07T17:46:08.540Z] [Screen: ProfileSetup]
+Message: Profile Setup Error
+Payload: {}
+Error: "Network request failed"
+Stack: TypeError: Network request failed
+    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+----------------------------------------
+[2026-05-07T17:46:20.740Z] [Screen: ProfileSetup]
+Message: Profile Setup Error
+Payload: {}
+Error: "Network request failed"
+Stack: TypeError: Network request failed
+    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+----------------------------------------
+[2026-05-07T17:47:24.505Z] [Screen: ProfileSetup]
+Message: Profile Setup Error
+Payload: {}
+Error: "Network request failed"
+Stack: TypeError: Network request failed
+    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+----------------------------------------
+[2026-05-07T17:47:59.481Z] [Screen: ProfileSetup]
+Message: Profile Setup Error
+Payload: {}
+Error: "Network request failed"
+Stack: TypeError: Network request failed
+    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+----------------------------------------
+[2026-05-07T17:48:00.947Z] [Screen: ProfileSetup]
+Message: Profile Setup Error
+Payload: {}
+Error: "Network request failed"
+Stack: TypeError: Network request failed
+    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+----------------------------------------
+[2026-05-07T17:51:48.916Z] [Screen: ProfileSetup]
+Message: Profile Setup Error
+Payload: {}
+Error: "Network request failed"
+Stack: TypeError: Network request failed
+    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+----------------------------------------

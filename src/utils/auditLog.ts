@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 
-const prisma = new PrismaClient();
 
 interface AuditLogParams {
   action: string;
@@ -8,9 +7,10 @@ interface AuditLogParams {
   entityId?: string;
   ipAddress?: string;
   actorId?: string;
+  metadata?: any;
 }
 
-export const auditLog = async ({ action, entity, entityId, ipAddress, actorId }: AuditLogParams) => {
+export const auditLog = async ({ action, entity, entityId, ipAddress, actorId, metadata }: AuditLogParams) => {
   try {
     await prisma.auditLog.create({
       data: {
@@ -19,6 +19,7 @@ export const auditLog = async ({ action, entity, entityId, ipAddress, actorId }:
         entityId,
         ipAddress,
         actorId,
+        metadata,
       },
     });
   } catch (err) {

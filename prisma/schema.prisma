@@ -78,10 +78,32 @@ model Constituency {
   name      String   @db.VarChar(255)
   code      String   @unique @db.VarChar(50)
   type      String   @db.VarChar(100)
+  cityId    String?  @db.Uuid
   createdAt DateTime @default(now())
 
+  city      City?    @relation(fields: [cityId], references: [id], onDelete: SetNull)
   users     User[]
   elections Election[]
+}
+
+model Province {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @unique @db.VarChar(100)
+  capital        String?  @db.VarChar(100)
+  assemblyPrefix String?  @db.VarChar(20)
+  cities         City[]
+  createdAt      DateTime @default(now())
+}
+
+model City {
+  id              String         @id @default(uuid()) @db.Uuid
+  name            String         @db.VarChar(100)
+  provinceId      String         @db.Uuid
+  province        Province       @relation(fields: [provinceId], references: [id], onDelete: Cascade)
+  constituencies  Constituency[]
+  createdAt       DateTime       @default(now())
+  
+  @@unique([name, provinceId])
 }
 
 model User {
@@ -105,6 +127,7 @@ model User {
   city           String?       @db.VarChar(100)
   addressDetails String?       @db.Text
   photoUrl       String?       @db.Text
+  biometricTokenHash String?     @db.Text
   backupCodes    String[]      @default([])
 
   constituency   Constituency? @relation(fields: [constituencyId], references: [id], onDelete: SetNull)

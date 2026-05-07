@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { sendSuccess, sendError } from '../utils/response';
 import { otpService } from '../services/otp.service';
 import { auditLog } from '../utils/auditLog';
+import { cloudinaryService } from '../services/cloudinary.service';
 
-const prisma = new PrismaClient();
 
 export const authController = {
 
@@ -201,7 +201,7 @@ export const authController = {
       const tokenHash = await bcrypt.hash(biometricToken, 12);
       await prisma.user.update({
         where: { id: userId },
-        data: { passwordHash: tokenHash } // store alongside password
+        data: { biometricTokenHash: tokenHash }
       });
 
       return sendSuccess(res, 200, 'Biometric registered successfully');
@@ -218,7 +218,9 @@ export const authController = {
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user || !user.isActive) return sendError(res, 401, 'User not found');
 
-      const valid = await bcrypt.compare(biometricToken, user.passwordHash);
+      if (!user.biometricTokenHash) return sendError(res, 400, 'Biometric not registered for this user');
+
+      const valid = await bcrypt.compare(biometricToken, user.biometricTokenHash);
       if (!valid) return sendError(res, 401, 'Biometric verification failed');
 
       const accessToken = jwt.sign(
@@ -340,15 +342,22 @@ export const authController = {
   // POST /api/auth/register/complete
   completeRegistration: async (req: Request, res: Response) => {
     try {
-      const { userId, password } = req.body;
+      const { userId, password, biometricToken } = req.body;
 
       const passwordHash = await bcrypt.hash(password, 12);
+      
+      const updateData: any = {
+        passwordHash,
+        isActive: true
+      };
+
+      if (biometricToken) {
+        updateData.biometricTokenHash = await bcrypt.hash(biometricToken, 12);
+      }
+
       await prisma.user.update({
         where: { id: userId },
-        data: {
-          passwordHash,
-          isActive: true // User is now fully active
-        }
+        data: updateData
       });
 
       await auditLog({ action: 'USER_REGISTERED', entity: 'User', entityId: userId, ipAddress: req.ip });
@@ -400,6 +409,64 @@ export const authController = {
       await auditLog({ action: 'LIVENESS_VERIFIED', entity: 'User', entityId: user.id, ipAddress: req.ip });
 
       return sendSuccess(res, 200, 'Liveness detection successful. Identity confirmed.');
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  // POST /api/auth/upload-photo
+  uploadPhoto: async (req: Request, res: Response) => {
+    try {
+      const { userId, imageBase64 } = req.body;
+
+      if (!userId || !imageBase64) {
+        return sendError(res, 400, 'userId and imageBase64 are required');
+      }
+
+      // Upload to Cloudinary
+      const upload = await cloudinaryService.uploadImage(
+        `data:image/jpeg;base64,${imageBase64}`,
+        'iballot/profiles'
+      );
+
+      if (!upload.success || !upload.url) {
+        return sendError(res, 500, upload.message || 'Image upload failed');
+      }
+
+      // Save URL to user record
+      await prisma.user.update({
+        where: { id: userId },
+        data: { photoUrl: upload.url },
+      });
+
+      await auditLog({ action: 'PHOTO_UPLOADED', entity: 'User', entityId: userId, ipAddress: req.ip });
+
+      return sendSuccess(res, 200, 'Profile photo uploaded successfully', { photoUrl: upload.url });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  // POST /api/auth/resend-otp
+  resendOtp: async (req: Request, res: Response) => {
+    try {
+      const { userId, type } = req.body;
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+
+      if (!user) return sendError(res, 404, 'User not found');
+
+      // Use the existing OTP service to send a new code
+      await otpService.send(user.id, user.email, type);
+
+      await auditLog({ 
+        action: 'OTP_RESENT', 
+        entity: 'User', 
+        entityId: user.id, 
+        ipAddress: req.ip,
+        metadata: { type }
+      });
+
+      return sendSuccess(res, 200, 'A new verification code has been sent to your email.');
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }

@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import crypto from 'crypto';
 import { sendSuccess, sendError } from '../utils/response';
 import { auditLog } from '../utils/auditLog';
 
-const prisma = new PrismaClient();
+
 
 export const voteController = {
 

@@ -17,10 +17,13 @@ router.post('/register/profile', authController.updateProfile);
 // POST /api/auth/register/complete
 router.post('/register/complete', authController.completeRegistration);
 
-// POST /api/auth/verify-otp
-// Body: { userId, code, type: "PHONE_VERIFY" | "EMAIL_VERIFY" }
-// Response: { message: "Verified" }
+// POST /api/auth/upload-photo
+router.post('/upload-photo', authController.uploadPhoto);
+
 router.post('/verify-otp', authController.verifyOtp);
+
+// POST /api/auth/resend-otp
+router.post('/resend-otp', rateLimitMiddleware.otp, authController.resendOtp);
 
 // POST /api/auth/login
 // Body: { email, password }
