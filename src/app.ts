@@ -13,6 +13,10 @@ import candidateRoutes from './routes/candidate.routes';
 import adminRoutes from './routes/admin.routes';
 import resultRoutes from './routes/result.routes';
 import constituencyRoutes from './routes/constituency.routes';
+import appealRoutes from './routes/appeal.routes';
+import userRoutes from './routes/user.routes';
+import voterRoutes from './routes/voter.routes';
+import notificationRoutes from './routes/notification.routes';
 
 const app = express();
 
@@ -51,6 +55,10 @@ app.use('/api/candidates', candidateRoutes);
 app.use('/api/admin',      adminRoutes);
 app.use('/api/results',    resultRoutes);
 app.use('/api/constituencies', constituencyRoutes);
+app.use('/api/appeals',    appealRoutes);
+app.use('/api/users',      userRoutes);
+app.use('/api/voter',      voterRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ─── Frontend Logging ───────────────────────────────────────────
 app.post('/api/logs', (req, res) => {

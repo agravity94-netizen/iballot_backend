@@ -14,6 +14,46 @@ export const voteController = {
       const { electionId, candidateId } = req.body;
       const userId = (req as any).user.userId;
 
+      const [user, election, candidate] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { constituencyId: true, isVerified: true, isActive: true, role: true },
+        }),
+        prisma.election.findUnique({
+          where: { id: electionId },
+          select: { id: true, status: true, startDate: true, endDate: true, constituencyId: true },
+        }),
+        prisma.candidate.findUnique({
+          where: { id: candidateId },
+          select: { id: true, electionId: true, status: true },
+        }),
+      ]);
+
+      if (!user || user.role !== 'VOTER' || !user.isVerified || !user.isActive || !user.constituencyId) {
+        return sendError(res, 403, 'You are not eligible to vote');
+      }
+
+      if (!election) {
+        return sendError(res, 404, 'Election not found');
+      }
+
+      if (election.status !== 'ACTIVE') {
+        return sendError(res, 400, 'Voting is not open for this election');
+      }
+
+      const now = new Date();
+      if (election.startDate > now || election.endDate < now) {
+        return sendError(res, 400, 'This election is outside the active voting window');
+      }
+
+      if (election.constituencyId && election.constituencyId !== user.constituencyId) {
+        return sendError(res, 403, 'You are not eligible for this constituency election');
+      }
+
+      if (!candidate || candidate.electionId !== electionId || candidate.status !== 'APPROVED') {
+        return sendError(res, 400, 'Selected candidate is not valid for this election');
+      }
+
       // Generate unique receipt hash
       const receiptHash = crypto
         .createHash('sha256')

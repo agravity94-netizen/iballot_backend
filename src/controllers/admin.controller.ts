@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { sendSuccess, sendError } from '../utils/response';
-
+import { auditLog } from '../utils/auditLog';
 
 export const adminController = {
   // GET /api/admin/voters
@@ -30,7 +30,7 @@ export const adminController = {
   // GET /api/admin/stats
   getDashboardStats: async (req: Request, res: Response) => {
     try {
-      const [voterCount, activeElectionCount, totalVotes, pendingVoters, pendingCandidates, turnoutData] = await Promise.all([
+      const [voterCount, activeElectionCount, totalVotes, pendingVoters, pendingCandidates, pendingAppealCount, turnoutData] = await Promise.all([
         prisma.user.count({ where: { role: 'VOTER' } }),
         prisma.election.count({ where: { status: 'ACTIVE' } }),
         prisma.voteReceipt.count(),
@@ -47,6 +47,8 @@ export const adminController = {
           take: 5,
           orderBy: { createdAt: 'desc' }
         }),
+        // Pending Appeals
+        prisma.appeal.count({ where: { status: 'PENDING' } }),
         // Global Turnout by hour
         prisma.$queryRaw<any[]>`
           SELECT 
@@ -63,6 +65,7 @@ export const adminController = {
         voterCount,
         activeElectionCount,
         totalVotes,
+        pendingAppealCount,
         turnout: voterCount > 0 ? ((totalVotes / voterCount) * 100).toFixed(1) : 0,
         pendingApprovals: [
           ...pendingVoters.map((v: any) => ({ id: v.id, name: v.email.split('@')[0], type: 'VOTER_VERIFICATION', initials: v.email.substring(0, 2).toUpperCase() })),
@@ -78,19 +81,197 @@ export const adminController = {
   // PATCH /api/admin/voters/:id/status
   updateVoterStatus: async (req: Request, res: Response) => {
     try {
+      const id = req.params.id as string;
       const { status } = req.body;
-      const { id } = req.params;
+      const actorId = (req as any).user.userId;
 
       const isActive = status !== 'Suspended';
 
       const user = await prisma.user.update({
-        where: { id: id as string },
+        where: { id },
         data: { isActive }
       });
+
+      await auditLog({ action: `VOTER_${status.toUpperCase()}`, entity: 'User', entityId: id, actorId });
 
       return sendSuccess(res, 200, `Voter status updated to ${status}`, { user });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
-  }
+  },
+
+  // GET /api/admin/candidates
+  // Returns ALL candidates (PENDING, APPROVED, REJECTED) with full user + profile info
+  getCandidates: async (req: Request, res: Response) => {
+    try {
+      const { status } = req.query;
+
+      const candidates = await prisma.candidate.findMany({
+        where: {
+          ...(status && { status: status as any }),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              cnic: true,
+              phone: true,
+              photoUrl: true,
+              province: true,
+              city: true,
+              fatherName: true,
+            }
+          },
+          profile: true,
+          election: {
+            select: { id: true, title: true, type: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return sendSuccess(res, 200, 'Candidates fetched', {
+        candidates: candidates.map((c: any) => ({
+          id: c.id,
+          status: c.status,
+          approvedAt: c.approvedAt,
+          createdAt: c.createdAt,
+          election: c.election,
+          user: {
+            id: c.user.id,
+            name: c.user.email.split('@')[0],
+            email: c.user.email,
+            cnic: c.user.cnic,
+            phone: c.user.phone,
+            photoUrl: c.user.photoUrl,
+            province: c.user.province,
+            city: c.user.city,
+            fatherName: c.user.fatherName,
+          },
+          profile: c.profile ? {
+            manifesto: c.profile.manifesto,
+            experience: c.profile.experience,
+            promises: c.profile.promises,
+            photoUrl: c.profile.photoUrl,
+          } : null,
+        }))
+      });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  // PATCH /api/admin/candidates/:id/status
+  // Approve or reject a candidate application
+  updateCandidateStatus: async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id as string;
+      const { status, rejectionReason } = req.body;
+      const actorId = (req as any).user.userId;
+
+      if (!['APPROVED', 'REJECTED'].includes(status)) {
+        return sendError(res, 400, 'Status must be APPROVED or REJECTED');
+      }
+
+      const candidate = await prisma.candidate.findUnique({
+        where: { id },
+        include: { user: true }
+      });
+      if (!candidate) return sendError(res, 404, 'Candidate not found');
+
+      if (candidate.status !== 'PENDING') {
+        return sendError(res, 400, `Candidate is already ${candidate.status}`);
+      }
+
+      const updated = await prisma.candidate.update({
+        where: { id },
+        data: {
+          status,
+          approvedBy: actorId,
+          approvedAt: new Date(),
+        }
+      });
+
+      // Create notification for candidate
+      await prisma.notification.create({
+        data: {
+          userId: (candidate as any).user.id,
+          type: status === 'APPROVED' ? 'CANDIDATE_APPROVED' : 'FRAUD_ALERT',
+          title: status === 'APPROVED' ? 'Application Approved' : 'Application Rejected',
+          message: status === 'APPROVED'
+            ? 'Your candidacy application has been approved. You are now an official candidate.'
+            : `Your candidacy application has been rejected. Reason: ${rejectionReason || 'See official communication.'}`,
+        }
+      });
+
+      await auditLog({
+        action: `CANDIDATE_${status}`,
+        entity: 'Candidate',
+        entityId: id,
+        actorId,
+        metadata: { rejectionReason: rejectionReason || null }
+      });
+
+      return sendSuccess(res, 200, `Candidate ${status.toLowerCase()}`, { candidate: updated });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  // GET /api/admin/fraud-alerts
+  getFraudAlerts: async (req: Request, res: Response) => {
+    try {
+      const { resolved } = req.query;
+
+      const alerts = await prisma.fraudAlert.findMany({
+        where: {
+          ...(resolved !== undefined && { isResolved: resolved === 'true' }),
+        },
+        include: {
+          user: { select: { id: true, email: true, cnic: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
+
+      const counts = await prisma.fraudAlert.groupBy({
+        by: ['severity'],
+        _count: { severity: true },
+        where: { isResolved: false },
+      });
+
+      const severityCounts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+      counts.forEach((c: any) => {
+        severityCounts[c.severity as keyof typeof severityCounts] = c._count.severity;
+      });
+
+      return sendSuccess(res, 200, 'Fraud alerts fetched', { alerts, severityCounts });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  // PATCH /api/admin/fraud-alerts/:id/resolve
+  resolveFraudAlert: async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id as string;
+      const actorId = (req as any).user.userId;
+
+      const alert = await prisma.fraudAlert.findUnique({ where: { id } });
+      if (!alert) return sendError(res, 404, 'Alert not found');
+      if (alert.isResolved) return sendError(res, 400, 'Alert already resolved');
+
+      const updated = await prisma.fraudAlert.update({
+        where: { id },
+        data: { isResolved: true, resolvedBy: actorId }
+      });
+
+      await auditLog({ action: 'FRAUD_ALERT_RESOLVED', entity: 'FraudAlert', entityId: id, actorId });
+
+      return sendSuccess(res, 200, 'Alert resolved', { alert: updated });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
 };

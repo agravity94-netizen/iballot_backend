@@ -36,4 +36,10 @@ router.post('/', authMiddleware, roleMiddleware(['ADMIN', 'SUPER_ADMIN']), elect
 // Response: { election: { id, status } }
 router.patch('/:id/status', authMiddleware, roleMiddleware(['ADMIN', 'SUPER_ADMIN']), electionController.updateStatus);
 
+// PATCH /api/elections/:id  [ADMIN only]
+// Body: { title?, description?, constituencyId?, type?, startDate?, endDate? }
+// Response: { election: <updated> }
+// Only allowed when status is DRAFT or PUBLISHED
+router.patch('/:id', authMiddleware, roleMiddleware(['ADMIN', 'SUPER_ADMIN']), electionController.update);
+
 export default router;

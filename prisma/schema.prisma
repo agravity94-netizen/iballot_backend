@@ -71,6 +71,18 @@ enum NotificationType {
   RESULTS_PUBLISHED
   CANDIDATE_APPROVED
   FRAUD_ALERT
+  APPEAL_RESOLVED
+}
+
+enum AppealStatus {
+  PENDING
+  GRANTED
+  REJECTED
+}
+
+enum AppealType {
+  CANDIDATE_REJECTION
+  VOTER_REJECTION
 }
 
 model Constituency {
@@ -140,6 +152,8 @@ model User {
   fraudAlerts    FraudAlert[]
   notifications  Notification[]
   resolvedAlerts FraudAlert[]  @relation("ResolvedBy")
+  appeals        Appeal[]
+  resolvedAppeals Appeal[]     @relation("AppealResolver")
 }
 
 model Session {
@@ -309,4 +323,21 @@ model Notification {
   createdAt DateTime         @default(now())
 
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Appeal {
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @db.Uuid
+  type        AppealType
+  status      AppealStatus @default(PENDING)
+  statement   String       @db.Text
+  evidence    String[]     @default([])
+  adminNotes  String?      @db.Text
+  resolvedBy  String?      @db.Uuid
+  resolvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resolver    User?        @relation("AppealResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
 }

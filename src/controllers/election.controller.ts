@@ -13,30 +13,61 @@ export const electionController = {
       const { status, constituencyId } = req.query;
       const userId = (req as any).user.userId;
 
-      // Get user's constituency if not specified
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { constituencyId: true, isVerified: true, isActive: true, role: true },
+      });
 
       const elections = await prisma.election.findMany({
         where: {
           ...(status && { status: status as any }),
-          constituencyId: (constituencyId as string) || user?.constituencyId || undefined
+          constituencyId: (constituencyId as string) || user?.constituencyId || undefined,
         },
         include: {
-          _count: { select: { candidates: true } }
+          constituency: true,
+          _count: { select: { candidates: true } },
+          voteReceipts: {
+            where: { userId },
+            select: { receiptHash: true, castedAt: true },
+            take: 1,
+          },
         },
-        orderBy: { startDate: 'desc' }
+        orderBy: { startDate: 'desc' },
       });
 
+      const now = new Date();
+
       return sendSuccess(res, 200, 'Elections fetched', {
-        elections: elections.map((e: any) => ({
+        elections: elections.map((e: any) => {
+          const voteReceipt = e.voteReceipts[0] || null;
+          const isEligible = Boolean(user?.constituencyId) && user?.isVerified && user?.isActive && user?.role === 'VOTER';
+          const hasVoted = Boolean(voteReceipt);
+          const canVoteNow = isEligible && !hasVoted && e.status === 'ACTIVE' && e.startDate <= now && e.endDate >= now;
+
+          return {
           id: e.id,
           title: e.title,
           type: e.type,
           status: e.status,
           startDate: e.startDate,
           endDate: e.endDate,
-          candidateCount: e._count.candidates
-        }))
+          candidateCount: e._count.candidates,
+          isEligible,
+          hasVoted,
+          canVoteNow,
+          canViewResults: e.status === 'RESULTS_PUBLISHED',
+          receiptHash: voteReceipt?.receiptHash || null,
+          castedAt: voteReceipt?.castedAt || null,
+          constituency: e.constituency
+            ? {
+                id: e.constituency.id,
+                name: e.constituency.name,
+                code: e.constituency.code,
+                type: e.constituency.type,
+              }
+            : null,
+        };
+        })
       });
     } catch (err: any) {
       return sendError(res, 500, err.message);
@@ -46,14 +77,67 @@ export const electionController = {
   // GET /api/elections/:id
   getById: async (req: Request, res: Response) => {
     try {
-      const election = await prisma.election.findUnique({
+      const userId = (req as any).user.userId;
+      const [election, user, receipt] = await Promise.all([
+        prisma.election.findUnique({
         where: { id: String(req.params.id) },
-        include: { constituency: true }
-      });
+        include: {
+          constituency: true,
+          _count: { select: { candidates: true } },
+        },
+      }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { constituencyId: true, isVerified: true, isActive: true, role: true },
+        }),
+        prisma.voteReceipt.findFirst({
+          where: { electionId: String(req.params.id), userId },
+          select: { receiptHash: true, castedAt: true },
+        }),
+      ]);
 
       if (!election) return sendError(res, 404, 'Election not found');
 
-      return sendSuccess(res, 200, 'Election fetched', { election });
+      const now = new Date();
+      const isEligible =
+        user?.role === 'VOTER' &&
+        user?.isVerified &&
+        user?.isActive &&
+        Boolean(user?.constituencyId) &&
+        (!election.constituencyId || election.constituencyId === user?.constituencyId);
+
+      return sendSuccess(res, 200, 'Election fetched', {
+        election: {
+          id: election.id,
+          title: election.title,
+          description: election.description,
+          type: election.type,
+          status: election.status,
+          startDate: election.startDate,
+          endDate: election.endDate,
+          resultsPublishedAt: election.resultsPublishedAt,
+          candidateCount: election._count.candidates,
+          isEligible,
+          hasVoted: Boolean(receipt),
+          canVoteNow:
+            isEligible &&
+            !receipt &&
+            election.status === 'ACTIVE' &&
+            election.startDate <= now &&
+            election.endDate >= now,
+          canViewResults: election.status === 'RESULTS_PUBLISHED',
+          receiptHash: receipt?.receiptHash || null,
+          castedAt: receipt?.castedAt || null,
+          constituency: election.constituency
+            ? {
+                id: election.constituency.id,
+                name: election.constituency.name,
+                code: election.constituency.code,
+                type: election.constituency.type,
+              }
+            : null,
+        },
+      });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
@@ -62,16 +146,40 @@ export const electionController = {
   // GET /api/elections/:id/candidates
   getCandidates: async (req: Request, res: Response) => {
     try {
+      const election = await prisma.election.findUnique({
+        where: { id: String(req.params.id) },
+        select: { status: true },
+      });
+
+      if (!election) {
+        return sendError(res, 404, 'Election not found');
+      }
+
+      const canShowResults = election.status === 'RESULTS_PUBLISHED';
       const candidates = await prisma.candidate.findMany({
         where: { electionId: String(req.params.id), status: 'APPROVED' },
         include: {
-          user: { select: { email: true } },
+          user: { select: { email: true, fatherName: true, photoUrl: true } },
           profile: true,
           voteCount: true
-        }
+        },
+        orderBy: { createdAt: 'asc' },
       });
 
-      return sendSuccess(res, 200, 'Candidates fetched', { candidates });
+      return sendSuccess(res, 200, 'Candidates fetched', {
+        candidates: candidates.map((candidate) => ({
+          id: candidate.id,
+          electionId: candidate.electionId,
+          displayName: candidate.user.fatherName?.trim() || candidate.user.email.split('@')[0],
+          partyLabel: candidate.profile?.experience?.trim() || 'Independent',
+          photoUrl: candidate.profile?.photoUrl || candidate.user.photoUrl || null,
+          manifestoSummary: candidate.profile?.manifesto || null,
+          profileViews: candidate.profile?.profileViews || 0,
+          voteCount: canShowResults ? candidate.voteCount?.count ?? 0 : null,
+          votePercentage: null,
+          rank: null,
+        })),
+      });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
@@ -80,7 +188,20 @@ export const electionController = {
   // GET /api/elections/:id/results — uses materialized view
   getResults: async (req: Request, res: Response) => {
     try {
-      const results = await prisma.$queryRaw`
+      const election = await prisma.election.findUnique({
+        where: { id: String(req.params.id) },
+        include: { constituency: true, _count: { select: { candidates: true } } },
+      });
+
+      if (!election) {
+        return sendError(res, 404, 'Election not found');
+      }
+
+      if (election.status !== 'RESULTS_PUBLISHED') {
+        return sendError(res, 403, 'Results are not published yet');
+      }
+
+      const rawResults = await prisma.$queryRaw<any[]>`
         SELECT * FROM "ElectionResults"
         WHERE "electionId" = ${String(req.params.id)}::uuid
         ORDER BY "rank" ASC
@@ -90,7 +211,57 @@ export const electionController = {
         where: { electionId: String(req.params.id) }
       });
 
-      return sendSuccess(res, 200, 'Results fetched', { results, totalVotes });
+      const candidates = await prisma.candidate.findMany({
+        where: { electionId: String(req.params.id), status: 'APPROVED' },
+        include: {
+          user: { select: { email: true, fatherName: true, photoUrl: true } },
+          profile: true,
+        },
+      });
+
+      const results = rawResults.map((result) => {
+        const candidate = candidates.find((item) => item.id === result.candidateId);
+        return {
+          id: candidate?.id || result.candidateId,
+          electionId: String(req.params.id),
+          displayName: candidate ? candidate.user.fatherName?.trim() || candidate.user.email.split('@')[0] : 'Candidate',
+          partyLabel: candidate?.profile?.experience?.trim() || 'Independent',
+          photoUrl: candidate?.profile?.photoUrl || candidate?.user.photoUrl || null,
+          manifestoSummary: candidate?.profile?.manifesto || null,
+          profileViews: candidate?.profile?.profileViews || 0,
+          voteCount: Number(result.voteCount || 0),
+          votePercentage: Number(result.votePercentage || 0),
+          rank: Number(result.rank || 0),
+        };
+      });
+
+      return sendSuccess(res, 200, 'Results fetched', {
+        results,
+        totalVotes,
+        election: {
+          id: election.id,
+          title: election.title,
+          description: election.description,
+          type: election.type,
+          status: election.status,
+          startDate: election.startDate,
+          endDate: election.endDate,
+          resultsPublishedAt: election.resultsPublishedAt,
+          candidateCount: election._count.candidates,
+          isEligible: false,
+          hasVoted: false,
+          canVoteNow: false,
+          canViewResults: true,
+          constituency: election.constituency
+            ? {
+                id: election.constituency.id,
+                name: election.constituency.name,
+                code: election.constituency.code,
+                type: election.constituency.type,
+              }
+            : null,
+        },
+      });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
@@ -140,18 +311,29 @@ export const electionController = {
   // POST /api/elections
   create: async (req: Request, res: Response) => {
     try {
-      const { title, description, constituencyId, type, startDate, endDate } = req.body;
+      const { title, description, constituencyId, type, startDate, endDate, candidateIds } = req.body;
       const createdBy = (req as any).user.userId;
 
+      if (!title?.trim()) return sendError(res, 400, 'Election title is required');
+      if (!type) return sendError(res, 400, 'Election type is required');
+      if (!startDate || !endDate) return sendError(res, 400, 'Start and end dates are required');
       if (new Date(startDate) >= new Date(endDate)) {
         return sendError(res, 400, 'Start date must be before end date');
       }
 
       const election = await prisma.election.create({
-        data: { title, description, constituencyId, type, startDate, endDate, createdBy }
+        data: { title, description, constituencyId: constituencyId || null, type, startDate, endDate, createdBy }
       });
 
-      await auditLog({ action: 'ELECTION_CREATED', entity: 'Election', entityId: election.id, actorId: createdBy });
+      // Link provided candidate IDs to this election
+      if (Array.isArray(candidateIds) && candidateIds.length > 0) {
+        await prisma.candidate.updateMany({
+          where: { id: { in: candidateIds } },
+          data: { electionId: election.id }
+        });
+      }
+
+      await auditLog({ action: 'ELECTION_CREATED', entity: 'Election', entityId: election.id, actorId: createdBy, metadata: { candidateCount: candidateIds?.length || 0 } });
 
       return sendSuccess(res, 201, 'Election created', { election });
     } catch (err: any) {
@@ -191,6 +373,46 @@ export const electionController = {
       await auditLog({ action: `ELECTION_${status}`, entity: 'Election', entityId: election.id, actorId });
 
       return sendSuccess(res, 200, `Election ${status.toLowerCase()}`, { election: updated });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  // PATCH /api/elections/:id  [ADMIN only]
+  update: async (req: Request, res: Response) => {
+    try {
+      const { title, description, constituencyId, type, startDate, endDate } = req.body;
+      const actorId = (req as any).user.userId;
+      const electionId = String(req.params.id);
+
+      const election = await prisma.election.findUnique({ where: { id: electionId } });
+      if (!election) return sendError(res, 404, 'Election not found');
+
+      // Only allow editing elections that are not yet ACTIVE, CLOSED, or RESULTS_PUBLISHED
+      if (['ACTIVE', 'CLOSED', 'RESULTS_PUBLISHED'].includes(election.status)) {
+        return sendError(res, 400, `Cannot edit an election with status: ${election.status}`);
+      }
+
+      if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+        return sendError(res, 400, 'Start date must be before end date');
+      }
+
+      const updated = await prisma.election.update({
+        where: { id: electionId },
+        data: {
+          ...(title && { title }),
+          ...(description !== undefined && { description }),
+          ...(constituencyId !== undefined && { constituencyId: constituencyId || null }),
+          ...(type && { type }),
+          ...(startDate && { startDate: new Date(startDate) }),
+          ...(endDate && { endDate: new Date(endDate) }),
+        },
+        include: { constituency: true }
+      });
+
+      await auditLog({ action: 'ELECTION_UPDATED', entity: 'Election', entityId: electionId, actorId, metadata: req.body });
+
+      return sendSuccess(res, 200, 'Election updated', { election: updated });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
