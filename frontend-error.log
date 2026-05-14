@@ -1,43 +1,117 @@
 
-[2026-05-07T17:46:08.540Z] [Screen: ProfileSetup]
-Message: Profile Setup Error
+[2026-05-14T17:25:31.838Z] [Screen: election-results]
+Message: election-results load failed
 Payload: {}
-Error: "Network request failed"
-Stack: TypeError: Network request failed
-    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+Error: "\nInvalid `prisma.user.findUnique()` invocation in\nD:\\Voting App\\iBallot-backend\\src\\controllers\\election.controller.ts:16:38\n\n  13 const { status, constituencyId } = req.query;\n  14 const userId = (req as any).user.userId;\n  15 \n→ 16 const user = await prisma.user.findUnique(\nCan't reach database server at `aws-1-ap-south-1.pooler.supabase.com:6543`\n\nPlease make sure your database server is running at `aws-1-ap-south-1.pooler.supabase.com:6543`."
+Stack: ApiError: 
+Invalid `prisma.user.findUnique()` invocation in
+D:\Voting App\iBallot-backend\src\controllers\election.controller.ts:16:38
+
+  13 const { status, constituencyId } = req.query;
+  14 const userId = (req as any).user.userId;
+  15 
+→ 16 const user = await prisma.user.findUnique(
+Can't reach database server at `aws-1-ap-south-1.pooler.supabase.com:6543`
+
+Please make sure your database server is running at `aws-1-ap-south-1.pooler.supabase.com:6543`.
+    at construct (native)
+    at apply (native)
+    at _construct (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:5814:67)
+    at Wrapper (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:5786:25)
+    at construct (native)
+    at _callSuper (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:4316:110)
+    at ApiError (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:203965:38)
+    at ?anon_0_ (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:204012:29)
+    at next (native)
+    at asyncGeneratorStep (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9005:19)
+    at _next (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9019:29)
+    at tryCallOne (address at InternalBytecode.js:1:1180)
+    at anonymous (address at InternalBytecode.js:1:1874)
 ----------------------------------------
-[2026-05-07T17:46:20.740Z] [Screen: ProfileSetup]
-Message: Profile Setup Error
+[2026-05-14T17:25:41.427Z] [Screen: election-results]
+Message: election-results load failed
 Payload: {}
-Error: "Network request failed"
-Stack: TypeError: Network request failed
-    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+Error: "\nInvalid `prisma.user.findUnique()` invocation in\nD:\\Voting App\\iBallot-backend\\src\\controllers\\election.controller.ts:16:38\n\n  13 const { status, constituencyId } = req.query;\n  14 const userId = (req as any).user.userId;\n  15 \n→ 16 const user = await prisma.user.findUnique(\nCan't reach database server at `aws-1-ap-south-1.pooler.supabase.com:6543`\n\nPlease make sure your database server is running at `aws-1-ap-south-1.pooler.supabase.com:6543`."
+Stack: ApiError: 
+Invalid `prisma.user.findUnique()` invocation in
+D:\Voting App\iBallot-backend\src\controllers\election.controller.ts:16:38
+
+  13 const { status, constituencyId } = req.query;
+  14 const userId = (req as any).user.userId;
+  15 
+→ 16 const user = await prisma.user.findUnique(
+Can't reach database server at `aws-1-ap-south-1.pooler.supabase.com:6543`
+
+Please make sure your database server is running at `aws-1-ap-south-1.pooler.supabase.com:6543`.
+    at construct (native)
+    at apply (native)
+    at _construct (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:5814:67)
+    at Wrapper (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:5786:25)
+    at construct (native)
+    at _callSuper (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:4316:110)
+    at ApiError (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:203965:38)
+    at ?anon_0_ (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:204012:29)
+    at next (native)
+    at asyncGeneratorStep (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9005:19)
+    at _next (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9019:29)
+    at tryCallOne (address at InternalBytecode.js:1:1180)
+    at anonymous (address at InternalBytecode.js:1:1874)
 ----------------------------------------
-[2026-05-07T17:47:24.505Z] [Screen: ProfileSetup]
-Message: Profile Setup Error
+[2026-05-14T17:25:48.270Z] [Screen: election-results]
+Message: election-results load failed
 Payload: {}
-Error: "Network request failed"
-Stack: TypeError: Network request failed
-    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+Error: "\nInvalid `prisma.user.findUnique()` invocation in\nD:\\Voting App\\iBallot-backend\\src\\controllers\\election.controller.ts:16:38\n\n  13 const { status, constituencyId } = req.query;\n  14 const userId = (req as any).user.userId;\n  15 \n→ 16 const user = await prisma.user.findUnique(\nCan't reach database server at `aws-1-ap-south-1.pooler.supabase.com:6543`\n\nPlease make sure your database server is running at `aws-1-ap-south-1.pooler.supabase.com:6543`."
+Stack: ApiError: 
+Invalid `prisma.user.findUnique()` invocation in
+D:\Voting App\iBallot-backend\src\controllers\election.controller.ts:16:38
+
+  13 const { status, constituencyId } = req.query;
+  14 const userId = (req as any).user.userId;
+  15 
+→ 16 const user = await prisma.user.findUnique(
+Can't reach database server at `aws-1-ap-south-1.pooler.supabase.com:6543`
+
+Please make sure your database server is running at `aws-1-ap-south-1.pooler.supabase.com:6543`.
+    at construct (native)
+    at apply (native)
+    at _construct (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:5814:67)
+    at Wrapper (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:5786:25)
+    at construct (native)
+    at _callSuper (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:4316:110)
+    at ApiError (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:203965:38)
+    at ?anon_0_ (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:204012:29)
+    at next (native)
+    at asyncGeneratorStep (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9005:19)
+    at _next (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9019:29)
+    at tryCallOne (address at InternalBytecode.js:1:1180)
+    at anonymous (address at InternalBytecode.js:1:1874)
 ----------------------------------------
-[2026-05-07T17:47:59.481Z] [Screen: ProfileSetup]
-Message: Profile Setup Error
+[2026-05-14T17:26:00.382Z] [Screen: election-results]
+Message: election-results load failed
 Payload: {}
-Error: "Network request failed"
-Stack: TypeError: Network request failed
-    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
-----------------------------------------
-[2026-05-07T17:48:00.947Z] [Screen: ProfileSetup]
-Message: Profile Setup Error
-Payload: {}
-Error: "Network request failed"
-Stack: TypeError: Network request failed
-    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
-----------------------------------------
-[2026-05-07T17:51:48.916Z] [Screen: ProfileSetup]
-Message: Profile Setup Error
-Payload: {}
-Error: "Network request failed"
-Stack: TypeError: Network request failed
-    at anonymous (http://192.168.1.45:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9660:33)
+Error: "\nInvalid `prisma.user.findUnique()` invocation in\nD:\\Voting App\\iBallot-backend\\src\\controllers\\election.controller.ts:16:38\n\n  13 const { status, constituencyId } = req.query;\n  14 const userId = (req as any).user.userId;\n  15 \n→ 16 const user = await prisma.user.findUnique(\nCan't reach database server at `aws-1-ap-south-1.pooler.supabase.com:6543`\n\nPlease make sure your database server is running at `aws-1-ap-south-1.pooler.supabase.com:6543`."
+Stack: ApiError: 
+Invalid `prisma.user.findUnique()` invocation in
+D:\Voting App\iBallot-backend\src\controllers\election.controller.ts:16:38
+
+  13 const { status, constituencyId } = req.query;
+  14 const userId = (req as any).user.userId;
+  15 
+→ 16 const user = await prisma.user.findUnique(
+Can't reach database server at `aws-1-ap-south-1.pooler.supabase.com:6543`
+
+Please make sure your database server is running at `aws-1-ap-south-1.pooler.supabase.com:6543`.
+    at construct (native)
+    at apply (native)
+    at _construct (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:5814:67)
+    at Wrapper (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:5786:25)
+    at construct (native)
+    at _callSuper (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:4316:110)
+    at ApiError (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:203965:38)
+    at ?anon_0_ (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:204012:29)
+    at next (native)
+    at asyncGeneratorStep (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9005:19)
+    at _next (http://192.168.1.6:8081/node_modules/expo-router/entry.bundle//&platform=android&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=src%2Fapp&transform.reactCompiler=true&unstable_transformProfile=hermes-stable:9019:29)
+    at tryCallOne (address at InternalBytecode.js:1:1180)
+    at anonymous (address at InternalBytecode.js:1:1874)
 ----------------------------------------

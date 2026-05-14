@@ -185,11 +185,13 @@ export const electionController = {
     }
   },
 
-  // GET /api/elections/:id/results — uses materialized view
+  // GET /api/elections/:id/results — uses materialized view with CandidateVoteCount fallback
   getResults: async (req: Request, res: Response) => {
     try {
+      const electionId = String(req.params.id);
+
       const election = await prisma.election.findUnique({
-        where: { id: String(req.params.id) },
+        where: { id: electionId },
         include: { constituency: true, _count: { select: { candidates: true } } },
       });
 
@@ -201,39 +203,74 @@ export const electionController = {
         return sendError(res, 403, 'Results are not published yet');
       }
 
-      const rawResults = await prisma.$queryRaw<any[]>`
-        SELECT * FROM "ElectionResults"
-        WHERE "electionId" = ${String(req.params.id)}::uuid
-        ORDER BY "rank" ASC
-      `;
+      // Attempt to refresh the materialized view (non-blocking best-effort)
+      try {
+        await prisma.$executeRaw`REFRESH MATERIALIZED VIEW "ElectionResults"`;
+      } catch (_) {
+        // View may not support concurrent refresh or doesn't exist yet — continue
+      }
 
-      const totalVotes = await prisma.voteReceipt.count({
-        where: { electionId: String(req.params.id) }
-      });
+      const [rawResults, totalVotes, candidates] = await Promise.all([
+        prisma.$queryRaw<any[]>`
+          SELECT * FROM "ElectionResults"
+          WHERE "electionId" = ${electionId}::uuid
+          ORDER BY "rank" ASC
+        `.catch(() => [] as any[]),
+        prisma.voteReceipt.count({ where: { electionId } }),
+        prisma.candidate.findMany({
+          where: { electionId, status: 'APPROVED' },
+          include: {
+            user: { select: { email: true, fatherName: true, photoUrl: true } },
+            profile: true,
+            voteCount: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        }),
+      ]);
 
-      const candidates = await prisma.candidate.findMany({
-        where: { electionId: String(req.params.id), status: 'APPROVED' },
-        include: {
-          user: { select: { email: true, fatherName: true, photoUrl: true } },
-          profile: true,
-        },
-      });
+      let results: any[];
 
-      const results = rawResults.map((result) => {
-        const candidate = candidates.find((item) => item.id === result.candidateId);
-        return {
-          id: candidate?.id || result.candidateId,
-          electionId: String(req.params.id),
-          displayName: candidate ? candidate.user.fatherName?.trim() || candidate.user.email.split('@')[0] : 'Candidate',
-          partyLabel: candidate?.profile?.experience?.trim() || 'Independent',
-          photoUrl: candidate?.profile?.photoUrl || candidate?.user.photoUrl || null,
-          manifestoSummary: candidate?.profile?.manifesto || null,
-          profileViews: candidate?.profile?.profileViews || 0,
-          voteCount: Number(result.voteCount || 0),
-          votePercentage: Number(result.votePercentage || 0),
-          rank: Number(result.rank || 0),
-        };
-      });
+      if (rawResults && rawResults.length > 0) {
+        // Happy path: materialized view has data
+        results = rawResults.map((result) => {
+          const candidate = candidates.find((c) => c.id === result.candidateId);
+          return {
+            id: candidate?.id || result.candidateId,
+            electionId,
+            displayName: candidate
+              ? candidate.user.fatherName?.trim() || candidate.user.email.split('@')[0]
+              : 'Candidate',
+            partyLabel: candidate?.profile?.experience?.trim() || 'Independent',
+            photoUrl: candidate?.profile?.photoUrl || candidate?.user.photoUrl || null,
+            manifestoSummary: candidate?.profile?.manifesto || null,
+            profileViews: candidate?.profile?.profileViews || 0,
+            voteCount: Number(result.voteCount ?? 0),
+            votePercentage: Number(result.votePercentage ?? 0),
+            rank: Number(result.rank ?? 0),
+          };
+        });
+      } else {
+        // Fallback: derive results directly from CandidateVoteCount (view not refreshed yet)
+        const sorted = [...candidates].sort(
+          (a, b) => (b.voteCount?.count ?? 0) - (a.voteCount?.count ?? 0)
+        );
+        const total = sorted.reduce((sum, c) => sum + (c.voteCount?.count ?? 0), 0);
+        results = sorted.map((candidate, index) => {
+          const count = candidate.voteCount?.count ?? 0;
+          return {
+            id: candidate.id,
+            electionId,
+            displayName: candidate.user.fatherName?.trim() || candidate.user.email.split('@')[0],
+            partyLabel: candidate.profile?.experience?.trim() || 'Independent',
+            photoUrl: candidate.profile?.photoUrl || candidate.user.photoUrl || null,
+            manifestoSummary: candidate.profile?.manifesto || null,
+            profileViews: candidate.profile?.profileViews || 0,
+            voteCount: count,
+            votePercentage: total > 0 ? Number(((count / total) * 100).toFixed(2)) : 0,
+            rank: index + 1,
+          };
+        });
+      }
 
       return sendSuccess(res, 200, 'Results fetched', {
         results,
