@@ -208,9 +208,7 @@ export const electionController = {
         await prisma.$executeRaw`REFRESH MATERIALIZED VIEW "ElectionResults"`;
       } catch (_) {
         // View may not support concurrent refresh or doesn't exist yet — continue
-      }
-
-      const [rawResults, totalVotes, candidates] = await Promise.all([
+           const [rawResults, totalVotes, candidates, totalEligible] = await Promise.all([
         prisma.$queryRaw<any[]>`
           SELECT * FROM "ElectionResults"
           WHERE "electionId" = ${electionId}::uuid
@@ -225,6 +223,13 @@ export const electionController = {
             voteCount: true,
           },
           orderBy: { createdAt: 'asc' },
+        }),
+        prisma.user.count({
+          where: {
+            role: 'VOTER',
+            isVerified: true,
+            ...(election.constituencyId && { constituencyId: election.constituencyId }),
+          },
         }),
       ]);
 
@@ -275,6 +280,8 @@ export const electionController = {
       return sendSuccess(res, 200, 'Results fetched', {
         results,
         totalVotes,
+        totalEligible,
+        turnoutPercentage: totalEligible > 0 ? Number(((totalVotes / totalEligible) * 100).toFixed(1)) : 0,
         election: {
           id: election.id,
           title: election.title,
