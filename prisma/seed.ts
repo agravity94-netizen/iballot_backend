@@ -53,11 +53,20 @@ async function main() {
   const rawalpindi = await prisma.city.upsert({ where: { name_provinceId: { name: 'Rawalpindi', provinceId: punjab.id } }, update: {}, create: { name: 'Rawalpindi', provinceId: punjab.id } });
   const karachi = await prisma.city.upsert({ where: { name_provinceId: { name: 'Karachi', provinceId: sindh.id } }, update: {}, create: { name: 'Karachi', provinceId: sindh.id } });
 
-  const na120 = await prisma.constituency.upsert({ where: { code: 'NA-120' }, update: { name: 'Lahore Central', type: 'NATIONAL', cityId: lahore.id }, create: { code: 'NA-120', name: 'Lahore Central', type: 'NATIONAL', cityId: lahore.id } });
-  const na121 = await prisma.constituency.upsert({ where: { code: 'NA-121' }, update: { name: 'Lahore East', type: 'NATIONAL', cityId: lahore.id }, create: { code: 'NA-121', name: 'Lahore East', type: 'NATIONAL', cityId: lahore.id } });
-  const pp149 = await prisma.constituency.upsert({ where: { code: 'PP-149' }, update: { name: 'Lahore Provincial Seat', type: 'PROVINCIAL', cityId: lahore.id }, create: { code: 'PP-149', name: 'Lahore Provincial Seat', type: 'PROVINCIAL', cityId: lahore.id } });
-  const ps101 = await prisma.constituency.upsert({ where: { code: 'PS-101' }, update: { name: 'Karachi South', type: 'PROVINCIAL', cityId: karachi.id }, create: { code: 'PS-101', name: 'Karachi South', type: 'PROVINCIAL', cityId: karachi.id } });
   const lb47 = await prisma.constituency.upsert({ where: { code: 'LB-47' }, update: { name: 'District 47', type: 'LOCAL', cityId: rawalpindi.id }, create: { code: 'LB-47', name: 'District 47', type: 'LOCAL', cityId: rawalpindi.id } });
+  const na120 = await prisma.constituency.upsert({ where: { code: 'NA-120' }, update: { name: 'Lahore-III', type: 'NATIONAL_ASSEMBLY', cityId: lahore.id }, create: { code: 'NA-120', name: 'Lahore-III', type: 'NATIONAL_ASSEMBLY', cityId: lahore.id } });
+  const na121 = await prisma.constituency.upsert({ where: { code: 'NA-121' }, update: { name: 'Lahore-IV', type: 'NATIONAL_ASSEMBLY', cityId: lahore.id }, create: { code: 'NA-121', name: 'Lahore-IV', type: 'NATIONAL_ASSEMBLY', cityId: lahore.id } });
+  const ps101 = await prisma.constituency.upsert({ where: { code: 'PS-101' }, update: { name: 'Karachi South-I', type: 'PROVINCIAL_ASSEMBLY', cityId: karachi.id }, create: { code: 'PS-101', name: 'Karachi South-I', type: 'PROVINCIAL_ASSEMBLY', cityId: karachi.id } });
+  const pp149 = await prisma.constituency.upsert({ where: { code: 'PP-149' }, update: { name: 'Lahore-X', type: 'PROVINCIAL_ASSEMBLY', cityId: lahore.id }, create: { code: 'PP-149', name: 'Lahore-X', type: 'PROVINCIAL_ASSEMBLY', cityId: lahore.id } });
+
+  console.log('Seeding Parties...');
+  const parties = {
+    pti: await prisma.party.upsert({ where: { name: 'Pakistan Tehreek-e-Insaf' }, update: {}, create: { name: 'Pakistan Tehreek-e-Insaf', abbreviation: 'PTI' } }),
+    pmln: await prisma.party.upsert({ where: { name: 'Pakistan Muslim League (N)' }, update: {}, create: { name: 'Pakistan Muslim League (N)', abbreviation: 'PML-N' } }),
+    ppp: await prisma.party.upsert({ where: { name: 'Pakistan Peoples Party' }, update: {}, create: { name: 'Pakistan Peoples Party', abbreviation: 'PPP' } }),
+    ji: await prisma.party.upsert({ where: { name: 'Jamaat-e-Islami' }, update: {}, create: { name: 'Jamaat-e-Islami', abbreviation: 'JI' } }),
+    independent: await prisma.party.upsert({ where: { name: 'Independent Candidate' }, update: {}, create: { name: 'Independent Candidate', abbreviation: 'IND' } }),
+  };
 
   const admin = await upsertUser(passwordHash, { email: 'admin@iballot.com', phone: '+923000000000', cnic: '42101-0000000-1', role: Role.SUPER_ADMIN, fatherName: 'iBallot Super Admin', province: 'Punjab', city: 'Lahore', addressDetails: 'iBallot Head Office, Lahore' });
   const lahoreAdmin = await upsertUser(passwordHash, { email: 'lahore.admin@iballot.com', phone: '+923000000001', cnic: '42101-0000000-2', role: Role.ADMIN, fatherName: 'Lahore Election Admin', province: 'Punjab', city: 'Lahore', constituencyId: na120.id });
@@ -98,24 +107,24 @@ async function main() {
   };
 
   const candidateDefs = [
-    { user: candidateUsers[0], electionId: elections.activeGeneral.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-7), experience: 'PTI', manifesto: 'Expand public education funding, upgrade hospitals, and digitize citizen services.', promises: ['New schools in NA-120', '24/7 emergency clinics'], profileViews: 1480, count: 0 },
-    { user: candidateUsers[1], electionId: elections.activeGeneral.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-7), experience: 'PML-N', manifesto: 'Strengthen law and order, small business support, and urban transport.', promises: ['Market grants for traders', 'Safer streets'], profileViews: 1360, count: 0 },
-    { user: candidateUsers[2], electionId: elections.activeGeneral.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-6), experience: 'PPP', manifesto: 'Promote social justice, public jobs, and affordable utilities.', promises: ['Skill centers for youth', 'Utility relief program'], profileViews: 1210, count: 0 },
-    { user: candidateUsers[3], electionId: elections.activeGeneral.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-6), experience: 'Independent', manifesto: 'Independent platform focused on women-led entrepreneurship and clean governance.', promises: ['Women business incubators', 'Water quality improvements'], profileViews: 1095, count: 0 },
-    { user: candidateUsers[4], electionId: elections.activeGeneral.id, status: CandidateStatus.PENDING, experience: 'TLP', manifesto: 'Community-first local representation with neighborhood issue desks.', promises: ['Union council help desks'], profileViews: 320, count: 0 },
-    { user: candidateUsers[5], electionId: elections.activeGeneral.id, status: CandidateStatus.REJECTED, experience: 'Independent', manifesto: 'Independent reform campaign with incomplete nomination documents.', promises: ['Administrative reform'], profileViews: 250, count: 0 },
-    { user: candidateUsers[6], electionId: elections.upcomingMunicipal.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-5), experience: 'Independent', manifesto: 'Better sanitation, women safety transport, and digital complaint management.', promises: ['Daily garbage route tracking', 'Women shuttle program'], profileViews: 610, count: 0 },
-    { user: candidateUsers[7], electionId: elections.upcomingMunicipal.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-5), experience: 'PML-N', manifesto: 'Road maintenance, water supply stability, and fast permit services.', promises: ['Street maintenance crews', 'Water leakage hotline'], profileViews: 590, count: 0 },
-    { user: candidateUsers[8], electionId: elections.karachiPublished.id, status: CandidateStatus.APPROVED, approvedBy: karachiAdmin.id, approvedAt: addDays(-90), experience: 'MQM', manifesto: 'Port-area job growth and community policing.', promises: ['Port training scholarships', 'Neighborhood patrol hubs'], profileViews: 900, count: 8421 },
-    { user: candidateUsers[9], electionId: elections.karachiPublished.id, status: CandidateStatus.APPROVED, approvedBy: karachiAdmin.id, approvedAt: addDays(-90), experience: 'PPP', manifesto: 'Healthcare expansion and girls education scholarships.', promises: ['Clinic upgrades', 'Scholarship fund'], profileViews: 930, count: 9013 },
+    { user: candidateUsers[0], electionId: elections.activeGeneral.id, partyId: parties.pti.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-7), experience: '15 years in public service', manifesto: 'Expand public education funding, upgrade hospitals, and digitize citizen services.', promises: ['New schools in NA-120', '24/7 emergency clinics'], profileViews: 1480, count: 0 },
+    { user: candidateUsers[1], electionId: elections.activeGeneral.id, partyId: parties.pmln.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-7), experience: 'Former Mayor of Lahore', manifesto: 'Strengthen law and order, small business support, and urban transport.', promises: ['Market grants for traders', 'Safer streets'], profileViews: 1360, count: 0 },
+    { user: candidateUsers[2], electionId: elections.activeGeneral.id, partyId: parties.ppp.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-6), experience: 'Human rights advocate', manifesto: 'Promote social justice, public jobs, and affordable utilities.', promises: ['Skill centers for youth', 'Utility relief program'], profileViews: 1210, count: 0 },
+    { user: candidateUsers[3], electionId: elections.activeGeneral.id, partyId: parties.independent.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-6), experience: 'Community leader', manifesto: 'Independent platform focused on women-led entrepreneurship and clean governance.', promises: ['Women business incubators', 'Water quality improvements'], profileViews: 1095, count: 0 },
+    { user: candidateUsers[4], electionId: elections.activeGeneral.id, partyId: parties.ji.id, status: CandidateStatus.PENDING, experience: 'Social worker', manifesto: 'Community-first local representation with neighborhood issue desks.', promises: ['Union council help desks'], profileViews: 320, count: 0 },
+    { user: candidateUsers[5], electionId: elections.activeGeneral.id, partyId: parties.independent.id, status: CandidateStatus.REJECTED, experience: 'Newcomer', manifesto: 'Independent reform campaign with incomplete nomination documents.', promises: ['Administrative reform'], profileViews: 250, count: 0 },
+    { user: candidateUsers[6], electionId: elections.upcomingMunicipal.id, partyId: parties.independent.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-5), experience: 'Urban planner', manifesto: 'Better sanitation, women safety transport, and digital complaint management.', promises: ['Daily garbage route tracking', 'Women shuttle program'], profileViews: 610, count: 0 },
+    { user: candidateUsers[7], electionId: elections.upcomingMunicipal.id, partyId: parties.pmln.id, status: CandidateStatus.APPROVED, approvedBy: lahoreAdmin.id, approvedAt: addDays(-5), experience: 'Local councillor', manifesto: 'Road maintenance, water supply stability, and fast permit services.', promises: ['Street maintenance crews', 'Water leakage hotline'], profileViews: 590, count: 0 },
+    { user: candidateUsers[8], electionId: elections.karachiPublished.id, partyId: parties.ji.id, status: CandidateStatus.APPROVED, approvedBy: karachiAdmin.id, approvedAt: addDays(-90), experience: 'Karachi business owner', manifesto: 'Port-area job growth and community policing.', promises: ['Port training scholarships', 'Neighborhood patrol hubs'], profileViews: 900, count: 8421 },
+    { user: candidateUsers[9], electionId: elections.karachiPublished.id, partyId: parties.ppp.id, status: CandidateStatus.APPROVED, approvedBy: karachiAdmin.id, approvedAt: addDays(-90), experience: 'Healthcare professional', manifesto: 'Healthcare expansion and girls education scholarships.', promises: ['Clinic upgrades', 'Scholarship fund'], profileViews: 930, count: 9013 },
   ];
 
   const candidates: Record<string, string> = {};
   for (const item of candidateDefs) {
     const candidate = await prisma.candidate.upsert({
       where: { userId: item.user.id },
-      update: { electionId: item.electionId, status: item.status, approvedBy: item.approvedBy, approvedAt: item.approvedAt },
-      create: { userId: item.user.id, electionId: item.electionId, status: item.status, approvedBy: item.approvedBy, approvedAt: item.approvedAt },
+      update: { electionId: item.electionId, partyId: item.partyId, status: item.status, approvedBy: item.approvedBy, approvedAt: item.approvedAt },
+      create: { userId: item.user.id, electionId: item.electionId, partyId: item.partyId, status: item.status, approvedBy: item.approvedBy, approvedAt: item.approvedAt },
     });
     await prisma.candidateProfile.upsert({
       where: { candidateId: candidate.id },

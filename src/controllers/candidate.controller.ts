@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { sendError, sendSuccess } from '../utils/response';
+import { cloudinaryService } from '../services/cloudinary.service';
+import { auditLog } from '../utils/auditLog';
 
 const getDisplayName = (user: { email: string; fatherName?: string | null }) =>
   user.fatherName?.trim() || user.email.split('@')[0];
@@ -36,6 +38,105 @@ export const candidateController = {
       return sendSuccess(res, 200, 'Candidates fetched', {
         candidates: candidates.map((candidate) => mapCandidateSummary(candidate)),
       });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  getMetadata: async (_req: Request, res: Response) => {
+    try {
+      const parties = await prisma.party.findMany({ orderBy: { name: 'asc' } });
+      const constituencies = await prisma.constituency.findMany({ 
+        orderBy: { code: 'asc' },
+        include: { city: true }
+      });
+      const activeElections = await prisma.election.findMany({
+        where: { status: { in: ['PUBLISHED', 'ACTIVE'] } },
+        orderBy: { startDate: 'desc' }
+      });
+
+      return sendSuccess(res, 200, 'Metadata fetched', { parties, constituencies, activeElections });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  getMyApplication: async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user.userId;
+      const application = await prisma.candidateApplication.findFirst({
+        where: { userId },
+        include: { party: true, election: true },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return sendSuccess(res, 200, 'Application status fetched', { application });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  apply: async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user.userId;
+      const { 
+        electionId, partyId, constituencyId,
+        degreeName, institution, experience, manifesto, noCriminalRecord,
+        docs // Object with base64 strings: policeClearance, nominationForm, taxReturns, assetAffidavit, portraitPhoto
+      } = req.body;
+
+      // Basic validation
+      if (!electionId || !partyId || !constituencyId) {
+        return sendError(res, 400, 'Election, Party, and Constituency are required.');
+      }
+
+      // Check if already applied
+      const existing = await prisma.candidateApplication.findFirst({
+        where: { userId, electionId, status: 'PENDING' }
+      });
+      if (existing) return sendError(res, 409, 'You already have a pending application for this election.');
+
+      const uploadDoc = async (base64: string, folder: string) => {
+        if (!base64) return null;
+        const result = await cloudinaryService.uploadImage(`data:image/jpeg;base64,${base64}`, `iballot/candidate_apps/${folder}`);
+        return result.success ? result.url : null;
+      };
+
+      // Upload files sequentially to avoid hitting rate limits or memory issues in some environments
+      const policeClearanceUrl = await uploadDoc(docs?.policeClearance, 'police');
+      const nominationFormUrl = await uploadDoc(docs?.nominationForm, 'forms');
+      const taxReturnsUrl = await uploadDoc(docs?.taxReturns, 'tax');
+      const assetAffidavitUrl = await uploadDoc(docs?.assetAffidavit, 'assets');
+      const portraitPhotoUrl = await uploadDoc(docs?.portraitPhoto, 'portraits');
+
+      const application = await prisma.candidateApplication.create({
+        data: {
+          userId,
+          electionId,
+          partyId,
+          constituencyId,
+          degreeName,
+          institution,
+          experience,
+          manifesto,
+          noCriminalRecord: !!noCriminalRecord,
+          policeClearanceUrl,
+          nominationFormUrl,
+          taxReturnsUrl,
+          assetAffidavitUrl,
+          portraitPhotoUrl,
+          status: 'PENDING'
+        }
+      });
+
+      await auditLog({ 
+        action: 'CANDIDATE_APPLICATION_SUBMITTED', 
+        entity: 'CandidateApplication', 
+        entityId: application.id, 
+        ipAddress: req.ip 
+      });
+
+      return sendSuccess(res, 201, 'Application submitted successfully!', { application });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }

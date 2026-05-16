@@ -154,6 +154,7 @@ model User {
   resolvedAlerts FraudAlert[]  @relation("ResolvedBy")
   appeals        Appeal[]
   resolvedAppeals Appeal[]     @relation("AppealResolver")
+  candidateApplications CandidateApplication[]
 }
 
 model Session {
@@ -213,12 +214,14 @@ model Election {
   voteReceipts       VoteReceipt[]
   auditLogs          AuditLog[]
   candidateVoteCount CandidateVoteCount[]
+  candidateApplications CandidateApplication[]
 }
 
 model Candidate {
   id         String          @id @default(uuid()) @db.Uuid
   userId     String          @unique @db.Uuid
   electionId String          @db.Uuid
+  partyId    String?         @db.Uuid
   status     CandidateStatus @default(PENDING)
   approvedBy String?         @db.Uuid
   approvedAt DateTime?
@@ -226,6 +229,7 @@ model Candidate {
 
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   election   Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  party      Party?          @relation(fields: [partyId], references: [id], onDelete: SetNull)
   profile    CandidateProfile?
   voteCount  CandidateVoteCount?
   votes      Vote[]
@@ -340,4 +344,46 @@ model Appeal {
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   resolver    User?        @relation("AppealResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+}
+
+model Party {
+  id           String      @id @default(uuid()) @db.Uuid
+  name         String      @unique @db.VarChar(100)
+  abbreviation String?     @db.VarChar(20)
+  logoUrl      String?     @db.Text
+  createdAt    DateTime    @default(now())
+
+  candidates   Candidate[]
+  applications CandidateApplication[]
+}
+
+model CandidateApplication {
+  id              String          @id @default(uuid()) @db.Uuid
+  userId          String          @db.Uuid
+  electionId      String          @db.Uuid
+  partyId         String?         @db.Uuid
+  constituencyId  String?         @db.Uuid
+  
+  // Step 2 data
+  degreeName      String?         @db.VarChar(255)
+  institution     String?         @db.VarChar(255)
+  experience      String?         @db.Text
+  manifesto       String?         @db.Text
+  noCriminalRecord Boolean        @default(false)
+  
+  // Step 3 Documents (URLs)
+  policeClearanceUrl String?      @db.Text
+  nominationFormUrl  String?      @db.Text
+  taxReturnsUrl     String?      @db.Text
+  assetAffidavitUrl String?      @db.Text
+  portraitPhotoUrl  String?      @db.Text
+  
+  status          CandidateStatus @default(PENDING)
+  adminNotes      String?         @db.Text
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  election        Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  party           Party?          @relation(fields: [partyId], references: [id], onDelete: SetNull)
 }

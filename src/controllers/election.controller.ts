@@ -208,7 +208,9 @@ export const electionController = {
         await prisma.$executeRaw`REFRESH MATERIALIZED VIEW "ElectionResults"`;
       } catch (_) {
         // View may not support concurrent refresh or doesn't exist yet — continue
-           const [rawResults, totalVotes, candidates, totalEligible] = await Promise.all([
+      }
+
+      const [rawResults, totalVotes, candidates, totalEligible] = await Promise.all([
         prisma.$queryRaw<any[]>`
           SELECT * FROM "ElectionResults"
           WHERE "electionId" = ${electionId}::uuid
