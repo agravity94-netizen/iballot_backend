@@ -61,16 +61,37 @@ export const candidateController = {
     }
   },
 
-  getMyApplication: async (req: Request, res: Response) => {
+  getMyApplications: async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user.userId;
-      const application = await prisma.candidateApplication.findFirst({
+      const applications = await prisma.candidateApplication.findMany({
         where: { userId },
         include: { party: true, election: true },
         orderBy: { createdAt: 'desc' }
       });
 
-      return sendSuccess(res, 200, 'Application status fetched', { application });
+      return sendSuccess(res, 200, 'Applications fetched', { applications });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  getMe: async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user.userId;
+      const candidate = await prisma.candidate.findFirst({
+        where: { userId },
+        include: {
+          user: { select: { email: true, fatherName: true, photoUrl: true, cnic: true } },
+          profile: true,
+          party: true,
+          election: { include: { constituency: true } }
+        }
+      });
+
+      if (!candidate) return sendError(res, 404, 'You are not registered as a candidate.');
+
+      return sendSuccess(res, 200, 'Candidate profile fetched', { candidate });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
@@ -265,6 +286,24 @@ export const candidateController = {
           })),
         },
       });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  getApplicationById: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = (req as any).user.userId;
+
+      const application = await prisma.candidateApplication.findFirst({
+        where: { id: String(id), userId: String(userId) },
+        include: { party: true, election: true }
+      });
+
+      if (!application) return sendError(res, 404, 'Application not found.');
+
+      return sendSuccess(res, 200, 'Application fetched', { application });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }

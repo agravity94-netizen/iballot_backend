@@ -101,60 +101,50 @@ export const adminController = {
   },
 
   // GET /api/admin/candidates
-  // Returns ALL candidates (PENDING, APPROVED, REJECTED) with full user + profile info
+  // Returns ALL candidate applications (PENDING, APPROVED, REJECTED)
   getCandidates: async (req: Request, res: Response) => {
     try {
       const { status } = req.query;
 
-      const candidates = await prisma.candidate.findMany({
+      const applications = await prisma.candidateApplication.findMany({
         where: {
           ...(status && { status: status as any }),
         },
         include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              cnic: true,
-              phone: true,
-              photoUrl: true,
-              province: true,
-              city: true,
-              fatherName: true,
-            }
-          },
-          profile: true,
+          user: true,
           election: {
             select: { id: true, title: true, type: true }
-          }
+          },
+          party: true
         },
         orderBy: { createdAt: 'desc' }
       });
 
-      return sendSuccess(res, 200, 'Candidates fetched', {
-        candidates: candidates.map((c: any) => ({
-          id: c.id,
-          status: c.status,
-          approvedAt: c.approvedAt,
-          createdAt: c.createdAt,
-          election: c.election,
+      return sendSuccess(res, 200, 'Applications fetched', {
+        candidates: applications.map((app: any) => ({
+          id: app.id,
+          status: app.status,
+          createdAt: app.createdAt,
+          election: app.election,
+          party: app.party,
           user: {
-            id: c.user.id,
-            name: c.user.email.split('@')[0],
-            email: c.user.email,
-            cnic: c.user.cnic,
-            phone: c.user.phone,
-            photoUrl: c.user.photoUrl,
-            province: c.user.province,
-            city: c.user.city,
-            fatherName: c.user.fatherName,
+            id: app.user.id,
+            name: app.user.email.split('@')[0],
+            email: app.user.email,
+            cnic: app.user.cnic,
+            phone: app.user.phone,
+            photoUrl: app.user.photoUrl,
+            province: app.user.province,
+            city: app.user.city,
+            fatherName: app.user.fatherName,
           },
-          profile: c.profile ? {
-            manifesto: c.profile.manifesto,
-            experience: c.profile.experience,
-            promises: c.profile.promises,
-            photoUrl: c.profile.photoUrl,
-          } : null,
+          profile: {
+            manifesto: app.manifesto,
+            experience: app.experience,
+            photoUrl: app.portraitPhotoUrl,
+            degree: app.degreeName,
+            institution: app.institution
+          }
         }))
       });
     } catch (err: any) {
@@ -174,29 +164,60 @@ export const adminController = {
         return sendError(res, 400, 'Status must be APPROVED or REJECTED');
       }
 
-      const candidate = await prisma.candidate.findUnique({
+      const application = await prisma.candidateApplication.findUnique({
         where: { id },
         include: { user: true }
       });
-      if (!candidate) return sendError(res, 404, 'Candidate not found');
-
-      if (candidate.status !== 'PENDING') {
-        return sendError(res, 400, `Candidate is already ${candidate.status}`);
+      
+      if (!application) return sendError(res, 404, 'Application not found');
+      if (application.status !== 'PENDING') {
+        return sendError(res, 400, `Application is already ${application.status}`);
       }
 
-      const updated = await prisma.candidate.update({
+      // 1. Update Application status
+      const updatedApp = await prisma.candidateApplication.update({
         where: { id },
         data: {
           status,
-          approvedBy: actorId,
-          approvedAt: new Date(),
+          adminNotes: rejectionReason || null,
         }
       });
 
-      // Create notification for candidate
+      // 2. If APPROVED, create the official Candidate record
+      if (status === 'APPROVED') {
+        // Create Candidate
+        const candidate = await prisma.candidate.create({
+          data: {
+            userId: application.userId,
+            electionId: application.electionId,
+            partyId: application.partyId,
+            status: 'APPROVED',
+            approvedBy: actorId,
+            approvedAt: new Date(),
+          }
+        });
+
+        // Create Profile
+        await prisma.candidateProfile.create({
+          data: {
+            candidateId: candidate.id,
+            manifesto: application.manifesto,
+            experience: application.experience,
+            photoUrl: application.portraitPhotoUrl,
+          }
+        });
+
+        // Update User role (optional but recommended)
+        await prisma.user.update({
+          where: { id: application.userId },
+          data: { role: 'CANDIDATE' }
+        });
+      }
+
+      // 3. Create notification for candidate
       await prisma.notification.create({
         data: {
-          userId: (candidate as any).user.id,
+          userId: application.userId,
           type: status === 'APPROVED' ? 'CANDIDATE_APPROVED' : 'FRAUD_ALERT',
           title: status === 'APPROVED' ? 'Application Approved' : 'Application Rejected',
           message: status === 'APPROVED'
@@ -207,13 +228,13 @@ export const adminController = {
 
       await auditLog({
         action: `CANDIDATE_${status}`,
-        entity: 'Candidate',
+        entity: 'CandidateApplication',
         entityId: id,
         actorId,
         metadata: { rejectionReason: rejectionReason || null }
       });
 
-      return sendSuccess(res, 200, `Candidate ${status.toLowerCase()}`, { candidate: updated });
+      return sendSuccess(res, 200, `Application ${status.toLowerCase()}`, { application: updatedApp });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
