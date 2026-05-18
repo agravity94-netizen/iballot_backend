@@ -129,12 +129,34 @@ export const authController = {
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) return sendError(res, 401, 'Invalid credentials');
 
-      // Send login OTP
-      await otpService.send(user.id, user.email, 'LOGIN');
+      // Generate tokens directly for login (bypassing OTP)
+      const accessToken = jwt.sign(
+        { userId: user.id, role: user.role },
+        process.env.JWT_SECRET!,
+        { expiresIn: '15m' }
+      );
+      const refreshToken = jwt.sign(
+        { userId: user.id },
+        process.env.JWT_REFRESH_SECRET!,
+        { expiresIn: '7d' }
+      );
 
-      await auditLog({ action: 'LOGIN_ATTEMPT', entity: 'User', entityId: user.id, ipAddress: req.ip });
+      // Save session
+      await prisma.session.create({
+        data: {
+          userId: user.id,
+          token: refreshToken,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }
+      });
 
-      return sendSuccess(res, 200, 'OTP sent to your email', { userId: user.id });
+      await auditLog({ action: 'LOGIN_SUCCESS', entity: 'User', entityId: user.id, ipAddress: req.ip });
+
+      return sendSuccess(res, 200, 'Login successful', {
+        accessToken,
+        refreshToken,
+        user: { id: user.id, email: user.email, role: user.role }
+      });
 
     } catch (err: any) {
       return sendError(res, 500, err.message);
