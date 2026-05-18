@@ -75,11 +75,8 @@ export const authController = {
 
       if (!otp) return sendError(res, 400, 'Invalid or expired OTP');
 
-      // Mark OTP as used
+      // Mark OTP as used (Email verified successfully for registration step)
       await prisma.otpCode.update({ where: { id: otp.id }, data: { isUsed: true } });
-
-      // Mark user as verified
-      await prisma.user.update({ where: { id: userId }, data: { isVerified: true } });
 
       return sendSuccess(res, 200, 'Verification successful');
 
@@ -124,7 +121,6 @@ export const authController = {
 
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user || !user.isActive) return sendError(res, 401, 'Invalid credentials');
-      if (!user.isVerified) return sendError(res, 403, 'Please verify your account first');
 
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) return sendError(res, 401, 'Invalid credentials');
