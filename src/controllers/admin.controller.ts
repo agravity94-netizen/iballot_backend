@@ -85,11 +85,24 @@ export const adminController = {
       const { status } = req.body;
       const actorId = (req as any).user.userId;
 
-      const isActive = status !== 'Suspended';
+      let isActive = true;
+      let isVerified = false;
+
+      if (status === 'Verified') {
+        isActive = true;
+        isVerified = true;
+      } else if (status === 'Suspended') {
+        isActive = false;
+        // Suspension revokes verification
+        isVerified = false;
+      } else if (status === 'Pending') {
+        isActive = true;
+        isVerified = false;
+      }
 
       const user = await prisma.user.update({
         where: { id },
-        data: { isActive }
+        data: { isActive, isVerified }
       });
 
       await auditLog({ action: `VOTER_${status.toUpperCase()}`, entity: 'User', entityId: id, actorId });
