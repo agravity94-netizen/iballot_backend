@@ -109,12 +109,60 @@ export const appealController = {
         });
 
         if (status === 'GRANTED') {
-          if (appeal.type === 'CANDIDATE_REJECTION' && appeal.user.candidate) {
-            // Auto-approve candidate
-            await tx.candidate.update({
-              where: { id: appeal.user.candidate.id },
-              data: { status: 'APPROVED', approvedBy: actorId, approvedAt: new Date() }
+          if (appeal.type === 'CANDIDATE_REJECTION') {
+            // Find the latest rejected candidate application for this user
+            const application = await tx.candidateApplication.findFirst({
+              where: { userId: appeal.userId, status: 'REJECTED' },
+              orderBy: { createdAt: 'desc' }
             });
+
+            if (application) {
+              // 1. Update CandidateApplication status to APPROVED
+              await tx.candidateApplication.update({
+                where: { id: application.id },
+                data: { status: 'APPROVED', adminNotes: 'Appeal granted by ECP.' }
+              });
+
+              // 2. Upsert the official Candidate record
+              const candidate = await tx.candidate.upsert({
+                where: { userId: appeal.userId },
+                create: {
+                  userId: appeal.userId,
+                  electionId: application.electionId,
+                  partyId: application.partyId,
+                  status: 'APPROVED',
+                  approvedBy: actorId,
+                  approvedAt: new Date(),
+                },
+                update: {
+                  status: 'APPROVED',
+                  approvedBy: actorId,
+                  approvedAt: new Date()
+                }
+              });
+
+              // 3. Upsert the CandidateProfile
+              await tx.candidateProfile.upsert({
+                where: { candidateId: candidate.id },
+                create: {
+                  candidateId: candidate.id,
+                  manifesto: application.manifesto,
+                  experience: application.experience,
+                  photoUrl: application.portraitPhotoUrl,
+                },
+                update: {
+                  manifesto: application.manifesto,
+                  experience: application.experience,
+                  photoUrl: application.portraitPhotoUrl,
+                }
+              });
+
+              // 4. Update User role to CANDIDATE
+              await tx.user.update({
+                where: { id: appeal.userId },
+                data: { role: 'CANDIDATE' }
+              });
+            }
           } else if (appeal.type === 'VOTER_REJECTION') {
             // Auto-verify voter
             await tx.user.update({
@@ -125,6 +173,9 @@ export const appealController = {
         }
 
         return result;
+      }, {
+        maxWait: 15000, // wait up to 15 seconds to obtain a connection lock
+        timeout: 30000  // allow up to 30 seconds for transaction execution
       });
 
       // Create notification in-app
@@ -160,10 +211,25 @@ export const appealController = {
   submitAppeal: async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user.userId as string;
-      const { type, statement, evidence } = req.body;
+      let { type, statement, evidence } = req.body;
+
+      // Compatibility fallback layer for older/different portal payloads
+      if (!type && req.body.applicationId) {
+        type = 'CANDIDATE_REJECTION';
+      }
+      if (!statement && req.body.reason) {
+        statement = req.body.reason;
+      }
+      if (!evidence && req.body.evidence) {
+        evidence = Array.isArray(req.body.evidence) ? req.body.evidence : [req.body.evidence];
+      }
+
+      if (!type || !statement) {
+        return sendError(res, 400, 'Appeal type and statement are required.');
+      }
 
       const existing = await prisma.appeal.findFirst({
-        where: { userId, type, status: 'PENDING' }
+        where: { userId, type: type as any, status: 'PENDING' }
       });
 
       if (existing) return sendError(res, 400, 'You already have a pending appeal of this type');
@@ -171,7 +237,7 @@ export const appealController = {
       const appeal = await prisma.appeal.create({
         data: {
           userId,
-          type,
+          type: type as any,
           statement,
           evidence: evidence || [],
         }

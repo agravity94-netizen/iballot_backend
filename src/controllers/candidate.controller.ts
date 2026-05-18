@@ -64,13 +64,25 @@ export const candidateController = {
   getMyApplications: async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user.userId;
-      const applications = await prisma.candidateApplication.findMany({
-        where: { userId },
-        include: { party: true, election: true },
-        orderBy: { createdAt: 'desc' }
+      const [applications, appeal] = await Promise.all([
+        prisma.candidateApplication.findMany({
+          where: { userId },
+          include: { party: true, election: true },
+          orderBy: { createdAt: 'desc' }
+        }),
+        prisma.appeal.findFirst({
+          where: { userId, type: 'CANDIDATE_REJECTION', status: 'PENDING' }
+        })
+      ]);
+
+      const mappedApplications = applications.map(app => {
+        if (app.status === 'REJECTED' && appeal) {
+          return { ...app, status: 'APPEAL_PENDING' };
+        }
+        return app;
       });
 
-      return sendSuccess(res, 200, 'Applications fetched', { applications });
+      return sendSuccess(res, 200, 'Applications fetched', { applications: mappedApplications });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
@@ -296,14 +308,23 @@ export const candidateController = {
       const { id } = req.params;
       const userId = (req as any).user.userId;
 
-      const application = await prisma.candidateApplication.findFirst({
-        where: { id: String(id), userId: String(userId) },
-        include: { party: true, election: true }
-      });
+      const [application, appeal] = await Promise.all([
+        prisma.candidateApplication.findFirst({
+          where: { id: String(id), userId: String(userId) },
+          include: { party: true, election: true }
+        }),
+        prisma.appeal.findFirst({
+          where: { userId, type: 'CANDIDATE_REJECTION', status: 'PENDING' }
+        })
+      ]);
 
       if (!application) return sendError(res, 404, 'Application not found.');
 
-      return sendSuccess(res, 200, 'Application fetched', { application });
+      const mappedApplication = application.status === 'REJECTED' && appeal
+        ? { ...application, status: 'APPEAL_PENDING' }
+        : application;
+
+      return sendSuccess(res, 200, 'Application fetched', { application: mappedApplication });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }
