@@ -140,6 +140,7 @@ model User {
   addressDetails String?       @db.Text
   photoUrl       String?       @db.Text
   biometricTokenHash String?     @db.Text
+  twoFactorEnabled Boolean       @default(false)
   backupCodes    String[]      @default([])
 
   constituency   Constituency? @relation(fields: [constituencyId], references: [id], onDelete: SetNull)

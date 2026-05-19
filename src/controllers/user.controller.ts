@@ -36,6 +36,7 @@ export const userController = {
           city: user.city,
           addressDetails: user.addressDetails,
           biometricEnabled: Boolean(user.biometricTokenHash),
+          twoFactorEnabled: user.twoFactorEnabled,
           registrationStatus: getRegistrationStatus(user),
           constituency: user.constituency
             ? {
@@ -61,7 +62,7 @@ export const userController = {
   updateMe: async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user.userId;
-      const allowedFields = ['phone', 'photoUrl', 'fatherName', 'province', 'city', 'addressDetails', 'constituencyId'] as const;
+      const allowedFields = ['phone', 'photoUrl', 'fatherName', 'province', 'city', 'addressDetails', 'constituencyId', 'twoFactorEnabled'] as const;
       const data = allowedFields.reduce<Record<string, unknown>>((acc, field) => {
         if (req.body[field] !== undefined) {
           acc[field] = req.body[field];
@@ -90,6 +91,7 @@ export const userController = {
           city: updatedUser.city,
           addressDetails: updatedUser.addressDetails,
           biometricEnabled: Boolean(updatedUser.biometricTokenHash),
+          twoFactorEnabled: updatedUser.twoFactorEnabled,
           registrationStatus: getRegistrationStatus(updatedUser),
           constituency: updatedUser.constituency
             ? {

@@ -215,6 +215,14 @@ export const authController = {
       const { biometricToken } = req.body;
       const userId = (req as any).user.userId;
 
+      if (!biometricToken) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { biometricTokenHash: null }
+        });
+        return sendSuccess(res, 200, 'Biometric unregistered successfully');
+      }
+
       // Store hashed biometric token (never store raw)
       const tokenHash = await bcrypt.hash(biometricToken, 12);
       await prisma.user.update({
