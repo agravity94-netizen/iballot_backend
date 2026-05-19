@@ -125,6 +125,14 @@ export const authController = {
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) return sendError(res, 401, 'Invalid credentials');
 
+      if (user.twoFactorEnabled) {
+        await otpService.send(user.id, user.email, 'LOGIN');
+        return sendSuccess(res, 200, 'Two-factor authentication code sent', {
+          require2FA: true,
+          userId: user.id
+        });
+      }
+
       // Generate tokens directly for login (bypassing OTP)
       const accessToken = jwt.sign(
         { userId: user.id, role: user.role },
