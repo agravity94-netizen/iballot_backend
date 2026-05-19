@@ -61,7 +61,7 @@ export const userController = {
   updateMe: async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user.userId;
-      const allowedFields = ['phone', 'photoUrl', 'fatherName', 'province', 'city', 'addressDetails'] as const;
+      const allowedFields = ['phone', 'photoUrl', 'fatherName', 'province', 'city', 'addressDetails', 'constituencyId'] as const;
       const data = allowedFields.reduce<Record<string, unknown>>((acc, field) => {
         if (req.body[field] !== undefined) {
           acc[field] = req.body[field];

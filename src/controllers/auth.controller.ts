@@ -490,6 +490,40 @@ export const authController = {
     }
   },
 
+  // POST /api/auth/change-password
+  changePassword: async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user.userId;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return sendError(res, 400, 'Current password and new password are required');
+      }
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return sendError(res, 404, 'User not found');
+      }
+
+      const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!valid) {
+        return sendError(res, 401, 'Invalid current password');
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash }
+      });
+
+      await auditLog({ action: 'PASSWORD_CHANGED', entity: 'User', entityId: userId, ipAddress: req.ip });
+
+      return sendSuccess(res, 200, 'Password updated successfully');
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
   // POST /api/auth/logout
   logout: async (req: Request, res: Response) => {
     try {

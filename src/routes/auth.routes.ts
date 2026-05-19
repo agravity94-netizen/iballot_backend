@@ -64,6 +64,10 @@ router.post('/2fa/verify-backup', authController.verifyBackupCode);
 // POST /api/auth/2fa/verify-liveness
 router.post('/2fa/verify-liveness', authController.verifyLiveness);
 
+// POST /api/auth/change-password
+// Headers: Authorization: Bearer <token>
+router.post('/change-password', authMiddleware, authController.changePassword);
+
 // POST /api/auth/logout
 // Headers: Authorization: Bearer <token>
 // Response: { message: "Logged out" }
