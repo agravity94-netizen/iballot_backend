@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { sendError, sendSuccess } from '../utils/response';
+import { auditLog } from '../utils/auditLog';
 
 const getRegistrationStatus = (user: any) => {
   if (!user.isVerified || !user.isActive) return 'PENDING';
@@ -76,6 +77,17 @@ export const userController = {
         include: { constituency: true },
       });
 
+      await auditLog({
+        action: 'PROFILE_UPDATED',
+        entity: 'User',
+        entityId: userId,
+        actorId: userId,
+        ipAddress: req.ip,
+        metadata: {
+          updatedFields: Object.keys(data)
+        }
+      });
+
       return sendSuccess(res, 200, 'Profile updated', {
         profile: {
           id: updatedUser.id,
@@ -113,6 +125,25 @@ export const userController = {
           },
         },
       });
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
+
+  getActivities: async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user.userId;
+      const logs = await prisma.auditLog.findMany({
+        where: {
+          OR: [
+            { actorId: userId },
+            { entityId: userId, entity: 'User' }
+          ]
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50
+      });
+      return sendSuccess(res, 200, 'Activity logs fetched', { logs });
     } catch (err: any) {
       return sendError(res, 500, err.message);
     }

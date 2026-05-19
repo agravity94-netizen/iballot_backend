@@ -21,7 +21,7 @@ export const voteController = {
         }),
         prisma.election.findUnique({
           where: { id: electionId },
-          select: { id: true, status: true, startDate: true, endDate: true, constituencyId: true },
+          select: { id: true, title: true, status: true, startDate: true, endDate: true, constituencyId: true },
         }),
         prisma.candidate.findUnique({
           where: { id: candidateId },
@@ -90,6 +90,18 @@ export const voteController = {
 
       // Refresh materialized view (non-blocking)
       prisma.$executeRaw`SELECT refresh_election_results()`.catch(() => { });
+
+      await auditLog({
+        action: 'VOTE_CAST',
+        entity: 'Election',
+        entityId: electionId,
+        actorId: userId,
+        ipAddress: req.ip,
+        metadata: {
+          receiptHash: voteResult.receiptHash,
+          electionTitle: election?.title || 'Unknown Election'
+        }
+      });
 
       return sendSuccess(res, 201, 'Vote cast successfully', {
         receiptHash: voteResult.receiptHash,
