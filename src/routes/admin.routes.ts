@@ -13,6 +13,7 @@ router.get('/stats', ...adminOnly, adminController.getDashboardStats);
 // Voters Management
 router.get('/voters', ...adminOnly, adminController.getVoters);
 router.patch('/voters/:id/status', ...adminOnly, adminController.updateVoterStatus);
+router.delete('/voters/:id', ...adminOnly, adminController.deleteVoter);
 
 // Candidate Management
 router.get('/candidates', ...adminOnly, adminController.getCandidates);

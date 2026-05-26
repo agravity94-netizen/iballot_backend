@@ -311,4 +311,42 @@ export const adminController = {
       return sendError(res, 500, err.message);
     }
   },
+
+  deleteVoter: async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id as string;
+      const actorId = (req as any).user.userId;
+
+      const user = await prisma.user.findUnique({
+        where: { id },
+      });
+
+      if (!user) {
+        return sendError(res, 404, 'Voter not found');
+      }
+
+      // Delete associated vote receipts first due to Restrict onDelete constraint
+      await prisma.voteReceipt.deleteMany({
+        where: { userId: id }
+      });
+
+      // Delete the user record
+      await prisma.user.delete({
+        where: { id }
+      });
+
+      await auditLog({ 
+        action: 'VOTER_DELETED', 
+        entity: 'User', 
+        entityId: id, 
+        actorId,
+        metadata: { deletedUserEmail: user.email, deletedUserCnic: user.cnic }
+      });
+
+      return sendSuccess(res, 200, 'Voter deleted successfully');
+    } catch (err: any) {
+      return sendError(res, 500, err.message);
+    }
+  },
 };
+
