@@ -117,11 +117,12 @@ export const adminController = {
   // Returns ALL candidate applications (PENDING, APPROVED, REJECTED)
   getCandidates: async (req: Request, res: Response) => {
     try {
-      const { status } = req.query;
+      const { status, constituencyId } = req.query;
 
       const applications = await prisma.candidateApplication.findMany({
         where: {
           ...(status && { status: status as any }),
+          ...(constituencyId && { constituencyId: constituencyId as string }),
         },
         include: {
           user: true,
@@ -137,6 +138,7 @@ export const adminController = {
         candidates: applications.map((app: any) => ({
           id: app.id,
           status: app.status,
+          constituencyId: app.constituencyId,
           createdAt: app.createdAt,
           election: app.election,
           party: app.party,
@@ -150,6 +152,7 @@ export const adminController = {
             province: app.user.province,
             city: app.user.city,
             fatherName: app.user.fatherName,
+            constituencyId: app.user.constituencyId,
           },
           profile: {
             manifesto: app.manifesto,
