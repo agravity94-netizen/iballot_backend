@@ -354,11 +354,17 @@ export const electionController = {
     }
   },
 
-  // POST /api/elections
+  // POST /api/elections  [ADMIN only]
   create: async (req: Request, res: Response) => {
     try {
-      const { title, description, constituencyId, type, startDate, endDate, candidateIds } = req.body;
+      const { title, description, constituencyId, type, startDate, endDate, candidateIds, adminToken } = req.body;
       const createdBy = (req as any).user.userId;
+
+      // Validate ECP Admin Token
+      const expectedToken = process.env.ADMIN_TOKEN || 'ECP-ADMIN-2026';
+      if (adminToken !== expectedToken) {
+        return sendError(res, 403, 'Invalid admin token. Launch unauthorized.');
+      }
 
       if (!title?.trim()) return sendError(res, 400, 'Election title is required');
       if (!type) return sendError(res, 400, 'Election type is required');
