@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const candidate_controller_1 = require("../controllers/candidate.controller");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.get('/', auth_middleware_1.authMiddleware, candidate_controller_1.candidateController.getAll);
+router.get('/me', auth_middleware_1.authMiddleware, candidate_controller_1.candidateController.getMe);
+router.get('/metadata', auth_middleware_1.authMiddleware, candidate_controller_1.candidateController.getMetadata);
+router.get('/my-applications', auth_middleware_1.authMiddleware, candidate_controller_1.candidateController.getMyApplications);
+router.get('/applications/:id', auth_middleware_1.authMiddleware, candidate_controller_1.candidateController.getApplicationById);
+router.post('/apply', auth_middleware_1.authMiddleware, candidate_controller_1.candidateController.apply);
+router.get('/compare', auth_middleware_1.authMiddleware, candidate_controller_1.candidateController.compare);
+router.get('/:id', auth_middleware_1.authMiddleware, candidate_controller_1.candidateController.getById);
+exports.default = router;

@@ -35,7 +35,15 @@ export const authController = {
       const existing = await prisma.user.findFirst({
         where: { OR: [{ email }, { phone }, { cnic }] }
       });
-      if (existing) return sendError(res, 409, 'User already exists with this email, phone, or CNIC');
+
+      if (existing) {
+        if (!existing.isVerified && !existing.fatherName) {
+          // Clean up the incomplete registration and cascade delete any associated otpCodes/sessions
+          await prisma.user.delete({ where: { id: existing.id } });
+        } else {
+          return sendError(res, 409, 'User already exists with this email, phone, or CNIC');
+        }
+      }
 
       // Create user in unverified state with a temporary password
       const tempPasswordHash = await bcrypt.hash(randomUUID(), 12);
@@ -311,11 +319,23 @@ export const authController = {
   // POST /api/auth/forgot-password
   forgotPassword: async (req: Request, res: Response) => {
     try {
-      const { email } = req.body;
+      const { email, cnic } = req.body;
 
-      const user = await prisma.user.findUnique({ where: { email } });
-      // Always return success to prevent email enumeration
-      if (!user) return sendSuccess(res, 200, 'If this email exists, an OTP has been sent');
+      if (!email || !cnic) {
+        return sendError(res, 400, 'Email and CNIC are required');
+      }
+
+      const formattedCnic = cnic.trim();
+      const user = await prisma.user.findFirst({ 
+        where: { 
+          email: email.trim(),
+          cnic: formattedCnic
+        } 
+      });
+
+      if (!user) {
+        return sendError(res, 404, 'No account found matching this CNIC and Email combination.');
+      }
 
       await otpService.send(user.id, user.email, 'PASSWORD_RESET');
 
