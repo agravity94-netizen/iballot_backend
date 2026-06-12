@@ -45,28 +45,29 @@ export const electionController = {
           const canVoteNow = isEligible && !hasVoted && e.status === 'ACTIVE' && e.startDate <= now && e.endDate >= now;
 
           return {
-          id: e.id,
-          title: e.title,
-          type: e.type,
-          status: e.status,
-          startDate: e.startDate,
-          endDate: e.endDate,
-          candidateCount: e._count.candidates,
-          isEligible,
-          hasVoted,
-          canVoteNow,
-          canViewResults: e.status === 'RESULTS_PUBLISHED',
-          receiptHash: voteReceipt?.receiptHash || null,
-          castedAt: voteReceipt?.castedAt || null,
-          constituency: e.constituency
-            ? {
-                id: e.constituency.id,
-                name: e.constituency.name,
-                code: e.constituency.code,
-                type: e.constituency.type,
-              }
-            : null,
-        };
+            id: e.id,
+            title: e.title,
+            type: e.type,
+            status: e.status,
+            startDate: e.startDate,
+            endDate: e.endDate,
+            createdAt: e.createdAt,
+            candidateCount: e._count.candidates,
+            isEligible,
+            hasVoted,
+            canVoteNow,
+            canViewResults: e.status === 'RESULTS_PUBLISHED',
+            receiptHash: voteReceipt?.receiptHash || null,
+            castedAt: voteReceipt?.castedAt || null,
+            constituency: e.constituency
+              ? {
+                  id: e.constituency.id,
+                  name: e.constituency.name,
+                  code: e.constituency.code,
+                  type: e.constituency.type,
+                }
+              : null,
+          };
         })
       });
     } catch (err: any) {
@@ -115,6 +116,7 @@ export const electionController = {
           status: election.status,
           startDate: election.startDate,
           endDate: election.endDate,
+          createdAt: election.createdAt,
           resultsPublishedAt: election.resultsPublishedAt,
           candidateCount: election._count.candidates,
           isEligible,
@@ -292,6 +294,7 @@ export const electionController = {
           status: election.status,
           startDate: election.startDate,
           endDate: election.endDate,
+          createdAt: election.createdAt,
           resultsPublishedAt: election.resultsPublishedAt,
           candidateCount: election._count.candidates,
           isEligible: false,
