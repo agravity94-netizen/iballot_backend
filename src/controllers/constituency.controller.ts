@@ -12,7 +12,16 @@ export const constituencyController = {
       const { city, province, type } = req.query;
       
       const where: any = {};
-      if (type) where.type = type as string;
+      if (type) {
+        const typeStr = (type as string).toUpperCase().replace(/\s+/g, '_');
+        if (typeStr.startsWith('NATIONAL')) {
+          where.type = { in: ['NATIONAL', 'NATIONAL_ASSEMBLY'] };
+        } else if (typeStr.startsWith('PROVINCIAL')) {
+          where.type = { in: ['PROVINCIAL', 'PROVINCIAL_ASSEMBLY'] };
+        } else {
+          where.type = typeStr;
+        }
+      }
       
       if (city) {
         where.city = { name: city as string };

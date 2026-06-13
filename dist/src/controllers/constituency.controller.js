@@ -13,8 +13,18 @@ exports.constituencyController = {
         try {
             const { city, province, type } = req.query;
             const where = {};
-            if (type)
-                where.type = type;
+            if (type) {
+                const typeStr = type.toUpperCase().replace(/\s+/g, '_');
+                if (typeStr.startsWith('NATIONAL')) {
+                    where.type = { in: ['NATIONAL', 'NATIONAL_ASSEMBLY'] };
+                }
+                else if (typeStr.startsWith('PROVINCIAL')) {
+                    where.type = { in: ['PROVINCIAL', 'PROVINCIAL_ASSEMBLY'] };
+                }
+                else {
+                    where.type = typeStr;
+                }
+            }
             if (city) {
                 where.city = { name: city };
             }
